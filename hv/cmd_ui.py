@@ -29,6 +29,7 @@ class HVShell(cmd.Cmd):
             device_id = int(arg[0])
             if len(self.devices) > device_id:
                 self.device = self.devices[device_id]
+                self.device.open()
                 self.prompt = '(HV-controls, device {}): '.format(device_id)
                 return
         except Exception:
@@ -38,6 +39,7 @@ class HVShell(cmd.Cmd):
 
     def do_detach(self, arg):
         "Detach device from shell."
+        self.device.close()
         self.device = None
         self.prompt = self._empty_promt
 
@@ -46,7 +48,7 @@ class HVShell(cmd.Cmd):
         try:
             voltage = float(arg[0])
             if self.device is not None:
-                pass
+                self.device.set_value(voltage)
         except Exception:
             pass
         finally:
@@ -54,15 +56,19 @@ class HVShell(cmd.Cmd):
 
     def do_apply(self, arg):
         'Apply the established voltage.'
-        pass
+        if self.device is not None:
+            self.device.update_value()
 
     def do_reset(self, arg):
         'Turn off.'
-        pass
+        if self.device is not None:
+            self.device.reset_value()
 
     def do_get(self, arg):
         "Get voltage and current"
-        pass
+        if self.device is not None:
+            I, U = self.device.get_IU()
+            print("I = {}, U = {}".format(I, U))
 
     def do_eof(self, arg):
         sys.exit(0)

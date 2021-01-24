@@ -26,10 +26,11 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points = {
       "console_scripts" : [
-          "mipt-optics = optics.main:main"
+          "hv-controls-cmd = hv.run:hv_controls_cmd",
+          "hv-controls-qt = hv.run:hv_controls_qt",
       ]
     },
-    package_data = { "optics" : ["data/*.txt"]},
+    package_data = { "hv" : ["data/*", "device_data/*"]},
     include_package_data = True,
     classifiers=(
         "Programming Language :: Python :: 3",
@@ -46,7 +47,9 @@ setuptools.setup(
         # 'scipy',
         # 'matplotlib',
         "pyqt5",
-        "pyusb"
+        "pyusb",
+        "pylibftdi",
+        "ftd2xx"
         # "appdirs",
 
     ]
