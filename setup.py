@@ -6,11 +6,9 @@ import setuptools
 with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
     long_description = fh.read()
 
-# NUMPY_MIN_VERSION = '1.8.2'
-# SCIPY_MIN_VERSION = '1.3.1'
+
 PYQT_MIN_VERSION = '5.9.2'
-# MATPLOTLIB_MIN_VERSION = '3.1.1'
-# PYTABLES_MIN_VERSION = '3.5.1'
+
 
 setuptools.setup(
     name="hv-controls",
@@ -43,15 +41,9 @@ setuptools.setup(
     #     "Source Code": "",
     # },
     install_requires=[
-        # 'numpy',
-        # 'scipy',
-        # 'matplotlib',
         "pyqt5",
         "pyusb",
         "pylibftdi",
         "ftd2xx"
-        # "appdirs",
-
     ]
-    # test_suite='tests'
 )

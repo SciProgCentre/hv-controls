@@ -1,5 +1,7 @@
 import abc
+import math
 from dataclasses import dataclass
+from enum import Enum
 from typing import List
 
 import usb.core
@@ -18,11 +20,11 @@ https://iosoft.blog/2018/12/02/ftdi-python-part-1/
 https://iosoft.blog/2018/12/05/ftdi-python-part-2/
 https://iosoft.blog/2018/12/05/ftdi-python-part-3/
 """
-# FTD2XX = False
-# if FTD2XX:
-#     from ftd2xx_device import FTD2XXDevice as Device
-# else:
-#     from ftdi_device import FTDIDevice as Device
+FTD2XX = False
+if FTD2XX:
+    from hv.ftd2xx_device import FTD2XXDevice as Device
+else:
+    from hv.ftdi_device import FTDIDevice as Device
 
 class DeviceInfoFormatter(abc.ABC):
     @abc.abstractmethod
@@ -34,15 +36,24 @@ class TextFormatter(DeviceInfoFormatter):
 
     def format(self, device) -> str:
         text = ""
-        text += "Device class: {}".format(device.bDeviceClass)
+        text += "Device name: {}".format(device.data.name)
         return text
+
+
 
 
 @dataclass
 class DeviceData:
     name: str
-    current_coeff: float
-    voltage_coeff: float
+    codemax : float
+    voltage_max : float
+    voltage_min : float
+    voltage_step: float
+    polarity : str
+    sensor_resistance : float
+    feedback_resistanse: float
+    current_min: float
+    current_units: str
 
 class HVDevice:
 
@@ -65,23 +76,43 @@ class HVDevice:
         self.device.close()
 
     def set_value(self, value):
-        pass
+        value = round(value * self.data.codemax / self.data.voltage_max)
+        first_byte = value - math.trunc(value/256)*256
+        second_byte = math.trunc(value/256)
+        self.device.write(HVDevice.SET_CODE, [first_byte, second_byte])
 
     def update_value(self):
-        pass
+        self.device.write(HVDevice.UPDATE_CODE)
 
     def reset_value(self):
-        pass
+        self.device.write(HVDevice.RESET_CODE)
 
     def get_IU(self):
-        return (random.random(), random.random())
+        """
+        Return Current (microA) and Voltage (V)
+        """
+        self.device.write(HVDevice.GET_CODE)
+        temp = self.device.read(5)
+        if temp[5] != 13: return (0, 0)
+        U = (temp[2]*256 + temp[3])*self.data.voltage_max/self.data.voltage_max
+        if self.data.polarity == "N" : U = -U
+
+        MAGIC_CONST = 4096/65535 # See Unit1.pas
+        I = (temp[0]*256 + temp[1])*MAGIC_CONST*self.data.sensor_resistance
+        k = 1
+        if self.data.current_units == "mA": k = 0.001
+        I = k *I
+        # Subtract feedback resistance current
+        I = I -abs(U*k/self.data.feedback_resistanse)
+        return (I, U)
 
     def device_info(self, formatter = TextFormatter()):
         return formatter.format(self.device)
 
     @staticmethod
     def find_all_devices() -> List["HVDevice"]:
-        return []
+        devices = Device.find_all_device(lambda x: x[0] == HVDevice.MANUFACTUTER)
+        return [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
 
     @staticmethod
     def find_new_devices(old) -> List["HVDevice"]:
@@ -89,16 +120,20 @@ class HVDevice:
 
     @staticmethod
     def load_device_data(name):
-
-        def loaf_coeff(file, name):
-            coeff = None
-            with open(pathlib.Path(DEVICE_PATH, file)) as fin:
-                for line in fin.readlines():
-                    line = line.split(" ")
-                    if line[0] == name:
-                        coeff = float(line[1])
-            return coeff
-
-        voltage_coef = loaf_coeff("voltage.txt", name)
-        current_coef = loaf_coeff("current.txt", name)
-        return DeviceData(name, current_coef, voltage_coef)
+        with open(pathlib.Path(DEVICE_PATH, "device_table.csv")) as fin:
+            fin.readline()
+            for line in fin.readlines():
+                line = line.split(",")
+                if line[0] == name:
+                    return DeviceData(name,
+                                      float(line[1]),
+                                      float(line[2]),
+                                      float(line[3]),
+                                      float(line[4]),
+                                      line[5],
+                                      float(line[6]),
+                                      float(line[7]),
+                                      float(line[8]),
+                                      line[9]
+                                      )
+        return None

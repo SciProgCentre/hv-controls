@@ -5,7 +5,10 @@ from hv.hv_device import HVDevice
 
 
 class HVShell(cmd.Cmd):
-    intro = 'Welcome to the HV-controls shell.\nType help or ? to list commands, and Ctrl+D to exit.\n'
+    intro = """Welcome to the HV-controls shell.
+Type help or ? to list commands, and Ctrl+D to exit.
+Type list for get list of device and nextly attach device
+"""
     _empty_promt = '(HV-controls): '
     prompt = _empty_promt
 
@@ -13,7 +16,7 @@ class HVShell(cmd.Cmd):
     devices = []
 
     def preloop(self) -> None:
-        self.devices = HVDevice.find_usb_devices()
+        self.devices = HVDevice.find_all_devices()
 
     def do_list(self, arg):
         "Print list of all devices."

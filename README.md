@@ -7,7 +7,7 @@ Run `pip install -e .` or install dependencies manualy:
 ```
 pip install pyqt pylibftdi ftd2xx
 ```
-Also driver FTDI or FTD2XX must be installed in OS.
+Also driver FTDI or FTD2XX must be installed in OS (For all platform can be used `conda install -c m-labs libftdi`).
 
 ## For developers
 
