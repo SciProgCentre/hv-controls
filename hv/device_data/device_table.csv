@@ -1,3 +1,4 @@
 Name,Code of max voltage,"Max voltage, V","Min voltage, V","Voltage step, V",Polarity,"Sensor resistance, kohm","Feedback resistanse, Mohm",Current min,Current units
+HT6000P,59519,6000,15,1,P,2,100,15,мкА
 HV2000P,64000,2000,10,1,P,5,100,5,мкА
 HV2000N,64000,2000,10,1,N,5,100,5,мкА

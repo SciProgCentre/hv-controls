@@ -111,7 +111,7 @@ class HVDevice:
 
     @staticmethod
     def find_all_devices() -> List["HVDevice"]:
-        devices = Device.find_all_device(lambda x: x[0] == HVDevice.MANUFACTUTER)
+        devices = Device.find_all_device(lambda x: x == HVDevice.MANUFACTUTER)
         return [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
 
     @staticmethod

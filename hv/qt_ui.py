@@ -30,6 +30,10 @@ class HVWidget(QtWidgets.QWidget):
         self.setup_box = QGroupBox("Voltage setup")
         hbox = QHBoxLayout()
         self.voltage_input = QDoubleSpinBox()
+        data = self.item.device.data
+        self.voltage_input.setMinimum(data.voltage_min)
+        self.voltage_input.setMaximum(data.voltage_max)
+        self.voltage_input.setSingleStep(data.voltage_step)
 
         def apply():
             self.item.device.set_value(self.voltage_input.value())
@@ -70,6 +74,9 @@ class HVWidget(QtWidgets.QWidget):
         self.current_display.display(I)
         self.voltage_display.display(U)
 
+    def closeTab(self):
+        self.item.device.close()
+
 class DeviceList(QtWidgets.QWidget):
     def __init__(self, parent = None, tabpane = None):
         super().__init__(parent)
@@ -98,7 +105,9 @@ class DeviceList(QtWidgets.QWidget):
 
     def init_model(self):
         for dev in HVDevice.find_all_devices():
-            self.device_model.appendColumn(dev)
+            self.device_model.appendColumn(HVItem(dev))
+
+
 
     def refresh(self):
         """
@@ -112,8 +121,7 @@ class DeviceList(QtWidgets.QWidget):
             item = self.device_model.item(index.row(), index.column())
             widget = HVWidget(item)
             self.tabpane.addTab(widget)
-            # TODO("Closing tab and device disconncet")
-            # items = self.device_list.
+            item.device.open()
 
 
 class MainWidget(QtWidgets.QWidget):
@@ -123,15 +131,18 @@ class MainWidget(QtWidgets.QWidget):
 
         self.device_list = DeviceList()
         self.tabpane = QTabWidget()
-
+        self.tabpane.setTabsClosable()
+        self.tabpane.tabCloseRequested.connect(self.closeTab)
         self.hbox.addWidget(self.device_list)
         self.hbox.addWidget(self.tabpane)
 
-        # For debug device view
-        demoWidget = HVWidget(HVItem(HVDevice(None)))
-        self.tabpane.addTab(demoWidget, "Demo")
 
         self.setLayout(self.hbox)
+
+    def closeTab(self, index):
+        widget = self.tabpane.widget(index)
+        widget.closeTab()
+        del widget
 
 class HVWindow(QtWidgets.QMainWindow):
 
