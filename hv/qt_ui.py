@@ -15,6 +15,7 @@ class HVItem(QStandardItem):
     def __init__(self, device: HVDevice):
         super().__init__()
         self.device = device
+        self.setData(device.data.name, 0)
 
 class HVWidget(QtWidgets.QWidget):
     def __init__(self, item : HVItem):
@@ -105,7 +106,7 @@ class DeviceList(QtWidgets.QWidget):
 
     def init_model(self):
         for dev in HVDevice.find_all_devices():
-            self.device_model.appendColumn(HVItem(dev))
+            self.device_model.appendRow([HVItem(dev)])
 
 
 
@@ -128,11 +129,10 @@ class MainWidget(QtWidgets.QWidget):
     def __init__(self, parent = None):
         super().__init__(parent)
         self.hbox = QHBoxLayout()
-
-        self.device_list = DeviceList()
         self.tabpane = QTabWidget()
-        self.tabpane.setTabsClosable()
+        self.tabpane.setTabsClosable(True)
         self.tabpane.tabCloseRequested.connect(self.closeTab)
+        self.device_list = DeviceList(tabpane=self.tabpane)
         self.hbox.addWidget(self.device_list)
         self.hbox.addWidget(self.tabpane)
 
