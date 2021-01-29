@@ -70,6 +70,9 @@ class HVWidget(QtWidgets.QWidget):
         self.current_display.display(I)
         self.voltage_display.display(U)
 
+    def closeTab(self):
+        self.item.device.close()
+
 class DeviceList(QtWidgets.QWidget):
     def __init__(self, parent = None, tabpane = None):
         super().__init__(parent)
@@ -100,6 +103,8 @@ class DeviceList(QtWidgets.QWidget):
         for dev in HVDevice.find_all_devices():
             self.device_model.appendColumn(dev)
 
+
+
     def refresh(self):
         """
         TODO(Update device list or realize subscription on new device)
@@ -112,8 +117,7 @@ class DeviceList(QtWidgets.QWidget):
             item = self.device_model.item(index.row(), index.column())
             widget = HVWidget(item)
             self.tabpane.addTab(widget)
-            # TODO("Closing tab and device disconncet")
-            # items = self.device_list.
+            item.device.open()
 
 
 class MainWidget(QtWidgets.QWidget):
@@ -123,15 +127,18 @@ class MainWidget(QtWidgets.QWidget):
 
         self.device_list = DeviceList()
         self.tabpane = QTabWidget()
-
+        self.tabpane.setTabsClosable()
+        self.tabpane.tabCloseRequested.connect(self.closeTab)
         self.hbox.addWidget(self.device_list)
         self.hbox.addWidget(self.tabpane)
 
-        # For debug device view
-        demoWidget = HVWidget(HVItem(HVDevice(None)))
-        self.tabpane.addTab(demoWidget, "Demo")
 
         self.setLayout(self.hbox)
+
+    def closeTab(self, index):
+        widget = self.tabpane.widget(index)
+        widget.closeTab()
+        del widget
 
 class HVWindow(QtWidgets.QMainWindow):
 

@@ -26,9 +26,11 @@ class FTDIDevice:
     @staticmethod
     def find_all_device(key: Optional[Callable] = None):
         devices = []
-        dev_list = filter(key, ftdi.Driver().list_devices())
+        dev_list = filter(lambda x: key(x[0]), ftdi.Driver().list_devices())
         for dev in dev_list:
-            temp = ftdi.Device(dev[2], lazy_open=True)
-            temp.name = dev[2]
-            devices.append(temp)
+            device_id = dev[2]
+            temp = ftdi.Device(device_id, lazy_open=True)
+            temp.name = dev[1]
+            temp.id = device_id
+            devices.append(FTDIDevice(temp))
         return devices
