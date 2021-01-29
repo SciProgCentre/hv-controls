@@ -30,6 +30,10 @@ class HVWidget(QtWidgets.QWidget):
         self.setup_box = QGroupBox("Voltage setup")
         hbox = QHBoxLayout()
         self.voltage_input = QDoubleSpinBox()
+        data = self.item.device.data
+        self.voltage_input.setMinimum(data.voltage_min)
+        self.voltage_input.setMaximum(data.voltage_max)
+        self.voltage_input.setSingleStep(data.voltage_step)
 
         def apply():
             self.item.device.set_value(self.voltage_input.value())
@@ -101,7 +105,7 @@ class DeviceList(QtWidgets.QWidget):
 
     def init_model(self):
         for dev in HVDevice.find_all_devices():
-            self.device_model.appendColumn(dev)
+            self.device_model.appendColumn(HVItem(dev))
 
 
 
