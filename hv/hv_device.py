@@ -68,6 +68,11 @@ class HVDevice:
     def __init__(self, device, data: DeviceData = None):
         self.device = device
         self.data = data
+        if data.current_units == "micro":
+            self.units_label = "μA"
+        else:
+            self.units_label = "mA"
+
 
     def open(self):
         self.device.open()
@@ -89,22 +94,26 @@ class HVDevice:
 
     def get_IU(self):
         """
-        Return Current (microA) and Voltage (V)
+        Return Current (microA or milliA) and Voltage (V)
         """
         self.device.write(HVDevice.GET_CODE)
         temp = self.device.read(5)
-        if temp[5] != 13: return (0, 0)
+        if temp is None or len(temp) < 5:
+            print("Can not get data from device, data_array={}".format(str(temp)))
+            return 0, 0
+        if temp[4] != 13:
+            print("Bad read: ", temp)
+            return 0, 0
         U = (temp[2]*256 + temp[3])*self.data.voltage_max/self.data.voltage_max
         if self.data.polarity == "N" : U = -U
-
         MAGIC_CONST = 4096/65535 # See Unit1.pas
         I = (temp[0]*256 + temp[1])*MAGIC_CONST*self.data.sensor_resistance
         k = 1
-        if self.data.current_units == "mA": k = 0.001
+        if self.data.current_units == "мА": k = 0.001
         I = k *I
         # Subtract feedback resistance current
-        I = I -abs(U*k/self.data.feedback_resistanse)
-        return (I, U)
+        I = I - abs(U*k/self.data.feedback_resistanse)
+        return I, U
 
     def device_info(self, formatter = TextFormatter()):
         return formatter.format(self.device)
@@ -112,11 +121,14 @@ class HVDevice:
     @staticmethod
     def find_all_devices() -> List["HVDevice"]:
         devices = Device.find_all_device(lambda x: x == HVDevice.MANUFACTUTER)
-        return [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
+        devices = [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
+        return devices #+ [create_test_device()]
 
     @staticmethod
     def find_new_devices(old) -> List["HVDevice"]:
-        pass
+        devices = Device.find_new_device(old, lambda x: x == HVDevice.MANUFACTUTER)
+        devices = [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
+        return devices
 
     @staticmethod
     def load_device_data(name):
@@ -134,6 +146,18 @@ class HVDevice:
                                       float(line[6]),
                                       float(line[7]),
                                       float(line[8]),
-                                      line[9]
+                                      line[9][:-1]
                                       )
         return None
+
+
+def create_test_device():
+    from hv.ftdi_device import FTDIDevice
+    dev = FTDIDevice('Mantigora', 'HT6000P', '00001010')
+    dev.open = lambda : None
+    dev.close = lambda : None
+    dev = HVDevice(dev, HVDevice.load_device_data(dev.name))
+    dev.get_IU = lambda : (random.random(), random.random())
+    dev.set_value = lambda x: print(x)
+    dev.update_value = lambda : print("update")
+    return dev
