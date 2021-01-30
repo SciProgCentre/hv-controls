@@ -1,6 +1,7 @@
 # hv-controls
-Simple GUI for HV source controls
+Simple GUI for HV source controls.
 
+Can be used for [Mantigora](http://mantigora.ru/highvolt_HV.htm) devices.
 ## Installation
 
 Run `pip install -e .` or install dependencies manualy:
