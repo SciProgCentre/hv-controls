@@ -39,8 +39,6 @@ class HVWidget(QtWidgets.QWidget):
         voltage_input.setMaximum(data.voltage_max)
         voltage_input.setSingleStep(data.voltage_step)
 
-
-
         slider = QSlider()
         slider.setMaximum(int(data.voltage_min))
         slider.setMaximum(int(data.voltage_max))
@@ -53,12 +51,17 @@ class HVWidget(QtWidgets.QWidget):
             self.item.device.set_value(voltage_input.value())
             self.item.device.update_value()
 
+
         setup_btn = QPushButton("Apply")
         setup_btn.clicked.connect(apply)
+        reset_btn = QPushButton("Reset")
+        reset_btn.clicked.connect(lambda : self.item.device.reset_value())
         hbox.addWidget(voltage_input)
         hbox.addWidget(setup_btn)
+        hbox.addWidget(reset_btn)
         vbox.addLayout(hbox)
         vbox.addWidget(slider)
+
         setup_box.setLayout(vbox)
 
         self.vbox.addWidget(setup_box)
@@ -87,7 +90,13 @@ class HVWidget(QtWidgets.QWidget):
         vbox.addLayout(hbox)
         indicator_box.setLayout(vbox)
         self.vbox.addWidget(indicator_box)
+
+        label = QLabel("Attenion!\nHV device save last voltage!\nTake care of yourself!")
+        label.setStyleSheet("QLabel {color : red}")
+        label.setAlignment(QtCore.Qt.AlignCenter)
+
         self.vbox.addStretch()
+        self.vbox.addWidget(label)
         self.setLayout(self.vbox)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:

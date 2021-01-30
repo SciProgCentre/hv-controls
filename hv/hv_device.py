@@ -160,4 +160,5 @@ def create_test_device():
     dev.get_IU = lambda : (random.random(), random.random())
     dev.set_value = lambda x: print(x)
     dev.update_value = lambda : print("update")
+    dev.reset_value = lambda : print("reset")
     return dev
