@@ -26,6 +26,7 @@ if FTD2XX:
 else:
     from hv.ftdi_device import FTDIDevice as Device
 
+
 class DeviceInfoFormatter(abc.ABC):
     @abc.abstractmethod
     def format(self, device) -> str:
@@ -35,29 +36,28 @@ class DeviceInfoFormatter(abc.ABC):
 class TextFormatter(DeviceInfoFormatter):
 
     def format(self, device) -> str:
-        text = ""
-        text += "Device name: {}".format(device.data.name)
-        return text
-
-
+        return str(device.device) + "\n" + str(device.data)
 
 
 @dataclass
 class DeviceData:
     name: str
-    codemax : float
-    voltage_max : float
-    voltage_min : float
+    codemax_ADC: int
+    codemax_DAC: int
+    voltage_max: float
+    voltage_min: float
     voltage_step: float
-    polarity : str
-    sensor_resistance : float
+    current_step: float
+    polarity: str
+    sensor_resistance: float
     feedback_resistanse: float
     current_min: float
+    current_max: float
     current_units: str
 
-class HVDevice:
 
-    MANUFACTUTER = "Mantigora" # See Unit1.pas
+class HVDevice:
+    MANUFACTUTER = "Mantigora"  # See Unit1.pas
 
     SET_CODE = 0x01
     UPDATE_CODE = 0x02
@@ -73,7 +73,6 @@ class HVDevice:
         else:
             self.units_label = "mA"
 
-
     def open(self):
         self.device.open()
 
@@ -82,8 +81,8 @@ class HVDevice:
 
     def set_value(self, value):
         value = round(value * self.data.codemax / self.data.voltage_max)
-        first_byte = value - math.trunc(value/256)*256
-        second_byte = math.trunc(value/256)
+        first_byte = value - math.trunc(value / 256) * 256
+        second_byte = math.trunc(value / 256)
         self.device.write(HVDevice.SET_CODE, [first_byte, second_byte])
 
     def update_value(self):
@@ -104,25 +103,25 @@ class HVDevice:
         if temp[4] != 13:
             print("Bad read: ", temp)
             return 0, 0
-        U = (temp[2]*256 + temp[3])*self.data.voltage_max/self.data.voltage_max
-        if self.data.polarity == "N" : U = -U
-        MAGIC_CONST = 4096/65535 # See Unit1.pas
-        I = (temp[0]*256 + temp[1])*MAGIC_CONST*self.data.sensor_resistance
+        U = (temp[2] * 256 + temp[3]) * self.data.voltage_max / self.data.voltage_max
+        if self.data.polarity == "N": U = -U
+        MAGIC_CONST = 4096 / 65535  # See Unit1.pas
+        I = (temp[0] * 256 + temp[1]) * MAGIC_CONST * self.data.sensor_resistance
         k = 1
         if self.data.current_units == "мА": k = 0.001
-        I = k *I
+        I = k * I
         # Subtract feedback resistance current
-        I = I - abs(U*k/self.data.feedback_resistanse)
+        I = I - abs(U * k / self.data.feedback_resistanse)
         return I, U
 
-    def device_info(self, formatter = TextFormatter()):
-        return formatter.format(self.device)
+    def device_info(self, formatter=TextFormatter()):
+        return formatter.format(self)
 
     @staticmethod
     def find_all_devices() -> List["HVDevice"]:
         devices = Device.find_all_device(lambda x: x == HVDevice.MANUFACTUTER)
         devices = [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
-        return devices #+ [create_test_device()]
+        return devices  # + [create_test_device()]
 
     @staticmethod
     def find_new_devices(old) -> List["HVDevice"]:
@@ -137,16 +136,19 @@ class HVDevice:
             for line in fin.readlines():
                 line = line.split(",")
                 if line[0] == name:
-                    return DeviceData(name,
-                                      float(line[1]),
-                                      float(line[2]),
-                                      float(line[3]),
-                                      float(line[4]),
-                                      line[5],
-                                      float(line[6]),
-                                      float(line[7]),
-                                      float(line[8]),
-                                      line[9][:-1]
+                    return DeviceData(name=name,
+                                      codemax_ADC=int(line[1]),
+                                      codemax_DAC=int(line[2]),
+                                      voltage_max=float(line[3]),
+                                      voltage_min=float(line[4]),
+                                      voltage_step=float(line[5]),
+                                      current_step=float(line[6]),
+                                      polarity=line[7],
+                                      sensor_resistance=float(line[8]),
+                                      feedback_resistanse=float(line[9]),
+                                      current_max=float(line[10]),
+                                      current_min=float(line[11]),
+                                      current_units=line[12].strip()
                                       )
         return None
 
@@ -154,11 +156,11 @@ class HVDevice:
 def create_test_device():
     from hv.ftdi_device import FTDIDevice
     dev = FTDIDevice('Mantigora', 'HT6000P', '00001010')
-    dev.open = lambda : None
-    dev.close = lambda : None
+    dev.open = lambda: None
+    dev.close = lambda: None
     dev = HVDevice(dev, HVDevice.load_device_data(dev.name))
-    dev.get_IU = lambda : (random.random(), random.random())
+    dev.get_IU = lambda: (random.random(), random.random())
     dev.set_value = lambda x: print(x)
-    dev.update_value = lambda : print("update")
-    dev.reset_value = lambda : print("reset")
+    dev.update_value = lambda: print("update")
+    dev.reset_value = lambda: print("reset")
     return dev

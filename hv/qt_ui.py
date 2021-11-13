@@ -23,7 +23,7 @@ class HVWidget(QtWidgets.QWidget):
         super().__init__()
         self.item = item
         self.init_UI()
-        self.timer_id = self.startTimer(1000)
+        # self.timer_id = self.startTimer(1000)
 
     def init_UI(self):
         styleSheet  = "QLabel {font-size : 16pt}"

@@ -6,10 +6,6 @@ import setuptools
 with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
     long_description = fh.read()
 
-
-PYQT_MIN_VERSION = '5.9.2'
-
-
 setuptools.setup(
     name="hv-controls",
     version="0.0.1",

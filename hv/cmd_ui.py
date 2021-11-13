@@ -36,8 +36,6 @@ Type list for get list of device and nextly attach device
                 self.prompt = '(HV-controls, device {}): '.format(device_id)
                 return
         except Exception:
-            pass
-        finally:
             print("Bad device ID")
 
     def do_detach(self, arg):
@@ -74,7 +72,7 @@ Type list for get list of device and nextly attach device
             print("I = {}, U = {}".format(I, U))
 
     def do_eof(self, arg):
-        sys.exit(0)
+        sys.exit()
 
     def precmd(self, line):
         line = line.lower()
