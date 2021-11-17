@@ -1,22 +1,20 @@
-import sys
 import pathlib
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QListView, QPushButton, QTabWidget, QGroupBox, QDoubleSpinBox, \
-    QLabel, QListWidget, QStyle, QLCDNumber, QSlider
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QPushButton, QTabWidget, QGroupBox, QDoubleSpinBox, \
+    QLabel, QListWidget, QLCDNumber, QSlider, QListWidgetItem
 
-from hv.hv_device import HVDevice
+from hv.hv_device import HVDevice, create_test_device
 
 ROOT_PATH = pathlib.Path(__file__).absolute().parent
 RESOURCE_PATH = pathlib.Path(ROOT_PATH, "data")
 
-class HVItem(QStandardItem):
-    def __init__(self, device: HVDevice):
-        super().__init__()
+class HVItem(QListWidgetItem):
+    def __init__(self, list_widget, device: HVDevice):
+        super().__init__(list_widget)
         self.device = device
-        self.setData(device.data.name, 0)
-        self.setEditable(False)
+        self.setData(0, device.data.name)
 
 class HVWidget(QtWidgets.QWidget):
     def __init__(self, item : HVItem):
@@ -29,7 +27,6 @@ class HVWidget(QtWidgets.QWidget):
         vbox = QVBoxLayout()
         hbox = QHBoxLayout()
         spin_input = QDoubleSpinBox()
-        data = self.item.device.data
         spin_input.setMinimum(min)
         spin_input.setMaximum(max)
         spin_input.setSingleStep(step)
@@ -57,7 +54,7 @@ class HVWidget(QtWidgets.QWidget):
         hbox, voltage_input = self._create_controls("Voltage:",
                                                         data.voltage_min, data.voltage_max, data.voltage_step)
         vbox.addLayout(hbox)
-        hbox, current_input = self._create_controls("Voltage:",
+        hbox, current_input = self._create_controls("Limiting current:",
                                                         data.current_min, data.current_max, data.current_step)
         vbox.addLayout(hbox)
 
@@ -117,10 +114,7 @@ class HVWidget(QtWidgets.QWidget):
 
         setup_box = self._create_controls_box()
         self.vbox.addWidget(setup_box)
-
-
         self.vbox.addStretch()
-
         self.setLayout(self.vbox)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
@@ -134,101 +128,86 @@ class HVWidget(QtWidgets.QWidget):
 
 
 class DeviceList(QtWidgets.QWidget):
-    def __init__(self, parent = None, tabpane = None):
+    def __init__(self, tabpane, auto_init = True, parent = None):
         super().__init__(parent)
-        self.used_devices = {}
         self.tabpane = tabpane
-        self.device_model = QStandardItemModel()
-        self.init_UI()
-        self.init_model()
+        self.init_UI(auto_init)
+        self.startTimer(60*1000, QtCore.Qt.VeryCoarseTimer)
 
-    def init_UI(self):
+    def timerEvent(self, a0: 'QTimerEvent') -> None:
+        self.refresh()
+
+    def add_fake_device(self):
+        fake_device = create_test_device()
+        HVItem(self.device_list, fake_device)
+
+    def init_UI(self, auto_init):
         self.vbox = QVBoxLayout()
-
-        self.device_list = QListView(self)
+        self.device_list = QListWidget(self)
         self.device_list.setMovement(0)
-        self.device_list.setModel(self.device_model)
-        self.open_btn = QPushButton("Open\nselected")
-        self.refresh_btn = QPushButton("Update\ndevice\nlist")
-        self.open_btn.clicked.connect(self.open_device)
+        self.device_list.doubleClicked.connect(self.open_device)
+        if auto_init:
+            self.init_model()
+
+        self.refresh_btn = QPushButton("Refresh\ndevice list")
         self.refresh_btn.clicked.connect(self.refresh)
-
-        self.vbox.addWidget(self.device_list)
-        self.vbox.addWidget(self.open_btn)
         self.vbox.addWidget(self.refresh_btn)
-
+        self.vbox.addWidget(self.device_list)
         self.setLayout(self.vbox)
 
     def init_model(self):
         for dev in HVDevice.find_all_devices():
-            self.device_model.appendRow([HVItem(dev)])
-
-
+            HVItem(self.device_list, dev)
 
     def refresh(self):
-        """
-        TODO(Update device list or realize subscription on new device)
-        """
-        n = self.device_model.rowCount()
         old = []
-        for i in range(n):
-            item = self.device_model.item(i,0)
+        for i in range(self.device_list.count()):
+            item = self.device_model.item(i)
             old.append(item.device)
         new = HVDevice.find_new_devices(old)
         for dev in new:
-            self.device_model.appendRow([HVItem(dev)])
+            HVItem(self.device_list, dev)
 
-    def open_device(self):
-        indexes = self.device_list.selectedIndexes()
-        for index in indexes:
-            item : HVItem = self.device_model.item(index.row(), index.column())
-            widget = HVWidget(item)
-            name = item.device.device.name
-            dev_url = item.device.device.url
-            self.tabpane.addTab(widget, "{}:{}".format(name, dev_url))
-            item.device.open()
+    def open_device(self, index):
+        item : HVItem = self.device_list.item(index.row())
+        widget = HVWidget(item)
+        name = item.device.device.name
+        dev_url = item.device.device.url
+        self.tabpane.addTab(widget, "{}\n{}".format(name, dev_url))
+        item.device.open()
 
 
 class MainWidget(QtWidgets.QWidget):
-    def __init__(self, parent = None):
+    def __init__(self,args, parent = None):
         super().__init__(parent)
         self.setStyleSheet("* {font-size: 12pt}")
-        self.hbox = QHBoxLayout()
-        self.tabpane = QTabWidget()
-        self.tabpane.setTabsClosable(True)
-        self.tabpane.tabCloseRequested.connect(self.closeTab)
-        self.device_list = DeviceList(tabpane=self.tabpane)
-        self.hbox.addWidget(self.device_list, stretch=10)
-        self.hbox.addWidget(self.tabpane, stretch=20)
-        self.setLayout(self.hbox)
+        hbox = QHBoxLayout()
+        tabpane = QTabWidget(self)
+        tabpane.setTabsClosable(True)
 
+        def close_tab(index):
+            widget = tabpane.widget(index)
+            widget.closeTab()
+            tabpane.removeTab(index)
+            del widget
 
-    def closeTab(self, index):
-        widget = self.tabpane.widget(index)
-        widget.closeTab()
-        del widget
+        tabpane.tabCloseRequested.connect(close_tab)
+        device_list = DeviceList(tabpane, auto_init = not args.fake_device, parent = self)
+        hbox.addWidget(device_list, stretch=10)
+        hbox.addWidget(tabpane, stretch=20)
+        self.setLayout(hbox)
 
+        if args.fake_device:
+            device_list.add_fake_device()
 
 class HVWindow(QtWidgets.QMainWindow):
 
-    ICON_PATH = pathlib.Path(RESOURCE_PATH, "basic_bolt.svg")
+    ICON_PATH = RESOURCE_PATH / "basic_bolt.svg"
 
     def __init__(self, args):
         super().__init__()
-
-        self.central = MainWidget()
+        self.central = MainWidget(args)
         self.setCentralWidget(self.central)
         self.setMinimumSize(720, 480)
         self.setWindowTitle("HV-controls")
         self.setWindowIcon(QIcon(str(self.ICON_PATH)))
-
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    window = HVWindow(sys.argv)
-    window.show()
-    sys.exit(app.exec_())
-    return 0
-
-if __name__ == '__main__':
-    main()

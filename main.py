@@ -6,6 +6,7 @@ from hv.run import hv_controls_cmd, hv_controls_qt
 def create_parser():
     parser = argparse.ArgumentParser("HV-controls")
     parser.add_argument("--gui", action="store_const", const="qt", default=None)
+    parser.add_argument("--fake-device", action="store_true")
     return parser
 
 def main():
@@ -17,7 +18,7 @@ def main():
         logging.basicConfig(filename = "hv-controls.log")
         hv_controls_cmd()
     elif args.gui == "qt":
-        hv_controls_qt()
+        hv_controls_qt(args)
 
     return 0
 

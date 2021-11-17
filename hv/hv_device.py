@@ -162,12 +162,12 @@ class HVDevice:
 
 def create_test_device():
     from hv.ftdi_device import FTDIDevice
-    dev = FTDIDevice('Mantigora', 'HT6000P', '00001010')
-    dev.open = lambda: None
-    dev.close = lambda: None
+    dev = FTDIDevice("TEST", "HT-60-30-P")
+    dev.open = lambda: print("open")
+    dev.close = lambda: print("close")
     dev = HVDevice(dev, HVDevice.load_device_data(dev.name))
     dev.get_IU = lambda: (random.random(), random.random())
-    dev.set_value = lambda x: print(x)
+    dev.set_value = lambda x,y: print(x,y)
     dev.update_value = lambda: print("update")
     dev.reset_value = lambda: print("reset")
     return dev
