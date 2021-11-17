@@ -11,8 +11,6 @@ https://iosoft.blog/2018/12/05/ftdi-python-part-3/
     """
     def __init__(self, device):
         self.device = device
-        # OPS = 0x03
-        # set_bitmode(OPS, 2)  # TODO(Select correct bit mode)
 
     def open(self):
         pass

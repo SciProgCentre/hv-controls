@@ -2,13 +2,13 @@
 Simple GUI for HV source controls.
 
 Can be used for [Mantigora](http://mantigora.ru/highvolt_HV.htm) devices.
+
 ## Installation
 
-Run `pip install -e .` or install dependencies manualy:
-```
-pip install pyqt pylibftdi ftd2xx
-```
-Also driver FTDI or FTD2XX must be installed in OS (For all platform can be used `conda install -c m-labs libftdi`).
+1. Install USB/FTDI drivers. Application used different drivers for Linux and Windows. For Linux used `pyftdi` with `libusb` (On Debian/Ubuntu use `sudo apt-get install libusb-1.0`) .For Windows used FTD2XX.
+2. Configure our system what would to allow using drivers from user-space. For linux see [here](https://eblot.github.io/pyftdi/installation.html#debian-ubuntu-linux) or run application with `sudo`.
+3. Install application from source, move apllication source directory and run `pip install -e .` (Also you can install dependencies manualy `pip install pyqt5 pyftdi ftd2xx`)
+4. Run `hv-controls-qt` in terminal (or `python3 main.py --gui`).
 
 ## For developers
 

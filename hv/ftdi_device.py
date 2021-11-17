@@ -4,13 +4,13 @@ from typing import Optional, Callable, List
 from pyftdi import ftdi
 from pyftdi.usbtools import UsbTools
 import pyftdi.serialext
-import serial
 from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import logging
 
 logger = logging.root
 
-class FTDIDevice:
+
+class PyFTDIDevice:
 
     BAUDRATE = 38400
     URLS = "ftdi"
@@ -19,12 +19,12 @@ class FTDIDevice:
         self.port = None
         self.name = name
         self.url = url
-
+        self.port = pyftdi.serialext.serial_for_url(self.url, bytesize=EIGHTBITS, parity=PARITY_NONE, stopbits=STOPBITS_ONE,
+                                                baudrate=38400, do_not_open=True)
     def __str__(self):
-        return "{}: {}".format(self.name,self.url)
+        return "{}:{}".format(self.name, self.url)
 
     def open(self):
-        self.port = pyftdi.serialext.serial_for_url(self.url, bytesize=EIGHTBITS, parity=PARITY_NONE, stopbits=STOPBITS_ONE, baudrate = 38400)
         self.port.open()
         logger.info("Open serial port for {}".format(self))
 
@@ -40,7 +40,7 @@ class FTDIDevice:
         self.port.write(temp)
 
     def read(self, nbytes) -> List[int]:
-        time.sleep(0.5)
+        time.sleep(0.3)
         s = self.port.read(nbytes)
         logger.debug("Read {}".format(s))
         result = [ord(c) for c in s] if type(s) is str else list(s)
@@ -48,22 +48,31 @@ class FTDIDevice:
         return result
 
     @staticmethod
-    def find_all_device(key: Optional[Callable] = None):
-        devspec = ftdi.Ftdi.list_devices()
-        urls = UsbTools.build_dev_strings(FTDIDevice.URLS, ftdi.Ftdi.VENDOR_IDS, ftdi.Ftdi.PRODUCT_IDS, devspec)
+    def open_urls(urls):
         devices = []
         for url, name in urls:
-            dev = FTDIDevice(url, name[1:-1])
+            dev = PyFTDIDevice(url, name[1:-1])
             devices.append(dev)
         return devices
 
     @staticmethod
+    def get_urls(key: Optional[Callable] = None):
+        devspec = ftdi.Ftdi.list_devices()
+        urls = UsbTools.build_dev_strings(PyFTDIDevice.URLS, ftdi.Ftdi.VENDOR_IDS, ftdi.Ftdi.PRODUCT_IDS, devspec)
+        urls = filter(key, urls)
+        return urls
+
+    @staticmethod
+    def find_all_device(key: Optional[Callable] = None):
+        return PyFTDIDevice.open_urls(PyFTDIDevice.get_urls(key))
+
+    @staticmethod
     def find_new_device(exist_dev: List["HVDevice"], key: Optional[Callable] = None):
-        devices = []
-        dev_list = filter(lambda x: key(x[0]), ftdi.Driver().list_devices())
-        for dev in dev_list:
+        new_urls = []
+        for url, name in PyFTDIDevice.get_urls(key):
             for exist in exist_dev:
-                device: FTDIDevice = exist.device
-                if (dev[2] != device.device_id):
-                    devices.append(FTDIDevice(*dev))
-        return devices
+                if url == exist.device.url:
+                    break
+            else:
+                new_urls.append(url)
+        return PyFTDIDevice.open_urls(new_urls)

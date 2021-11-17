@@ -38,8 +38,7 @@ setuptools.setup(
     # },
     install_requires=[
         "pyqt5",
-        "pyusb",
-        "pylibftdi",
+        "pyftdi",
         "ftd2xx"
     ]
 )

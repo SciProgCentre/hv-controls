@@ -1,7 +1,11 @@
 import cmd, sys
 from typing import Optional
 
-from hv.hv_device import HVDevice
+from hv.hv_device import HVDevice, create_test_device
+
+
+def device_info(device: HVDevice):
+    return str(device.device) + "\n" + str(device.data)
 
 
 class HVShell(cmd.Cmd):
@@ -15,16 +19,21 @@ Type list for get list of device and nextly attach device
     device : Optional[HVDevice] = None
     devices = []
 
+    def __init__(self, args):
+        super(HVShell, self).__init__()
+        self.args = args
+
     def preloop(self) -> None:
-        self.devices = HVDevice.find_all_devices()
+        if self.args.fake_device:
+            self.devices = [create_test_device()]
+        else:
+            self.devices = HVDevice.find_all_devices()
 
     def do_list(self, arg):
         "Print list of all devices."
         for i, dev in enumerate(self.devices):
             print("Device ID: {}".format(i))
-            print(dev.device_info())
-            print()
-
+            print(device_info(dev))
 
     def do_attach(self, arg):
         'Attach to device by ID: attach 0'
@@ -71,7 +80,12 @@ Type list for get list of device and nextly attach device
             I, U = self.device.get_IU()
             print("I = {}, U = {}".format(I, U))
 
+    def do_exit(self, arg):
+        self.close()
+        sys.exit()
+
     def do_eof(self, arg):
+        self.close()
         sys.exit()
 
     def precmd(self, line):
@@ -79,11 +93,17 @@ Type list for get list of device and nextly attach device
         return line
 
     def close(self):
-        pass
+        for dev in list(self.devices):
+            dev.close()
+            self.devices.remove(dev)
 
     def parse(arg):
         'Convert a series of zero or more numbers to an argument tuple'
         return tuple(map(int, arg.split()))
 
 if __name__ == '__main__':
-    HVShell().cmdloop()
+    try:
+        shell = HVShell()
+        shell.cmdloop()
+    finally:
+        shell.close()

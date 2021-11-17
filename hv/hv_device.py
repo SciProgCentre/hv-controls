@@ -25,19 +25,7 @@ FTD2XX = False
 if FTD2XX:
     from hv.ftd2xx_device import FTD2XXDevice as Device
 else:
-    from hv.ftdi_device import FTDIDevice as Device
-
-
-class DeviceInfoFormatter(abc.ABC):
-    @abc.abstractmethod
-    def format(self, device) -> str:
-        pass
-
-
-class TextFormatter(DeviceInfoFormatter):
-
-    def format(self, device) -> str:
-        return str(device.device) + "\n" + str(device.data)
+    from hv.ftdi_device import PyFTDIDevice as Device
 
 
 @dataclass
@@ -56,6 +44,36 @@ class DeviceData:
     current_max: float
     current_units: str
 
+    @staticmethod
+    def load_device_data(name):
+        with open(pathlib.Path(DEVICE_PATH, "device_table.csv")) as fin:
+            fin.readline()
+            for line in fin.readlines():
+                line = line.split(",")
+                if line[0] == name:
+                    return DeviceData(name=name,
+                                      codemax_ADC=int(line[1]),
+                                      codemax_DAC=int(line[2]),
+                                      voltage_max=float(line[3]),
+                                      voltage_min=float(line[4]),
+                                      voltage_step=float(line[5]),
+                                      current_step=float(line[6]),
+                                      polarity=line[7],
+                                      sensor_resistance=float(line[8]),
+                                      feedback_resistanse=float(line[9]),
+                                      current_min=float(line[10]),
+                                      current_max=float(line[11]),
+                                      current_units=line[12].strip()
+                                      )
+        return None
+
+    def resolve_current_label(self):
+        if self.current_units == "micro":
+            return "μA"
+        elif self.current_units == "milli":
+            return "mA"
+        else:
+            return "μA"
 
 class HVDevice:
     MANUFACTUTER = "Mantigora"  # See Unit1.pas
@@ -69,10 +87,10 @@ class HVDevice:
     def __init__(self, device, data: DeviceData = None):
         self.device = device
         self.data = data
-        if data.current_units == "micro":
-            self.units_label = "μA"
-        else:
-            self.units_label = "mA"
+        self.units_label = data.resolve_current_label()
+
+    def __str__(self):
+        return str(self.device)
 
     def open(self):
         self.device.open()
@@ -121,51 +139,27 @@ class HVDevice:
             I =I/1000
         return I, U
 
-    def device_info(self, formatter=TextFormatter()):
-        return formatter.format(self)
-
     @staticmethod
     def find_all_devices() -> List["HVDevice"]:
         devices = Device.find_all_device(lambda x: x == HVDevice.MANUFACTUTER)
-        devices = [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
+        devices = [HVDevice(dev, DeviceData.load_device_data(dev.name)) for dev in devices]
         return devices  # + [create_test_device()]
 
     @staticmethod
     def find_new_devices(old) -> List["HVDevice"]:
         devices = Device.find_new_device(old, lambda x: x == HVDevice.MANUFACTUTER)
-        devices = [HVDevice(dev, HVDevice.load_device_data(dev.name)) for dev in devices]
+        devices = [HVDevice(dev, DeviceData.load_device_data(dev.name)) for dev in devices]
         return devices
 
-    @staticmethod
-    def load_device_data(name):
-        with open(pathlib.Path(DEVICE_PATH, "device_table.csv")) as fin:
-            fin.readline()
-            for line in fin.readlines():
-                line = line.split(",")
-                if line[0] == name:
-                    return DeviceData(name=name,
-                                      codemax_ADC=int(line[1]),
-                                      codemax_DAC=int(line[2]),
-                                      voltage_max=float(line[3]),
-                                      voltage_min=float(line[4]),
-                                      voltage_step=float(line[5]),
-                                      current_step=float(line[6]),
-                                      polarity=line[7],
-                                      sensor_resistance=float(line[8]),
-                                      feedback_resistanse=float(line[9]),
-                                      current_max=float(line[10]),
-                                      current_min=float(line[11]),
-                                      current_units=line[12].strip()
-                                      )
-        return None
+
 
 
 def create_test_device():
-    from hv.ftdi_device import FTDIDevice
-    dev = FTDIDevice("TEST", "HT-60-30-P")
+    from hv.ftdi_device import PyFTDIDevice
+    dev = PyFTDIDevice("TEST", "HT-60-30-P")
     dev.open = lambda: print("open")
     dev.close = lambda: print("close")
-    dev = HVDevice(dev, HVDevice.load_device_data(dev.name))
+    dev = HVDevice(dev, DeviceData.load_device_data(dev.name))
     dev.get_IU = lambda: (random.random(), random.random())
     dev.set_value = lambda x,y: print(x,y)
     dev.update_value = lambda: print("update")

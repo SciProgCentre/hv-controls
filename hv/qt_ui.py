@@ -1,14 +1,16 @@
+import logging
 import pathlib
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QTimer
+from PyQt5 import QtCore
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QPushButton, QTabWidget, QGroupBox, QDoubleSpinBox, \
-    QLabel, QListWidget, QLCDNumber, QSlider, QListWidgetItem
+    QLabel, QListWidget, QLCDNumber, QSlider, QListWidgetItem, QWidget, QMainWindow, QPlainTextEdit, QMenu, QAction, \
+    QDialog
 
 from hv.hv_device import HVDevice, create_test_device
 
 ROOT_PATH = pathlib.Path(__file__).absolute().parent
 RESOURCE_PATH = pathlib.Path(ROOT_PATH, "data")
+
 
 class HVItem(QListWidgetItem):
     def __init__(self, list_widget, device: HVDevice):
@@ -16,8 +18,17 @@ class HVItem(QListWidgetItem):
         self.device = device
         self.setData(0, device.data.name)
 
-class HVWidget(QtWidgets.QWidget):
-    def __init__(self, item : HVItem):
+class AttentionLabel(QLabel):
+    def __init__(self):
+        super(AttentionLabel, self).__init__("Attenion!\nHV device save last voltage!\nTake care of yourself!")
+        self.setStyleSheet("QLabel {color : red}")
+        self.setAlignment(QtCore.Qt.AlignCenter)
+
+class HVWidget(QWidget):
+    style_sheet = "QLabel {font-size : 16pt}"
+    attention_label = AttentionLabel()
+
+    def __init__(self, item: HVItem):
         super().__init__()
         self.item = item
         self.init_UI()
@@ -32,16 +43,15 @@ class HVWidget(QtWidgets.QWidget):
         spin_input.setSingleStep(step)
 
         slider = QSlider()
-        slider.setMaximum(int(min))
-        slider.setMaximum(int(max))
-        slider.setSingleStep(int(step))
+        slider.setRange(int(min / step), int(max / step))
         slider.setOrientation(QtCore.Qt.Horizontal)
-        spin_input.valueChanged.connect(lambda x: slider.setValue(int(x)))
-        slider.valueChanged.connect(lambda x: spin_input.setValue(x))
+        spin_input.valueChanged.connect(lambda x: slider.setValue(int(x / step)))
+        slider.valueChanged.connect(lambda x: spin_input.setValue(x * step))
 
         vbox.addWidget(spin_input)
         vbox.addWidget(slider)
         label = QLabel(name)
+        label.setStyleSheet(self.style_sheet)
         hbox.addWidget(label)
         hbox.addLayout(vbox)
         return hbox, spin_input
@@ -49,27 +59,42 @@ class HVWidget(QtWidgets.QWidget):
     def _create_controls_box(self):
         data = self.item.device.data
         # Controls for setup voltage
-        setup_box = QGroupBox("Voltage setup")
+        setup_box = QGroupBox()
         vbox = QVBoxLayout()
-        hbox, voltage_input = self._create_controls("Voltage:",
-                                                        data.voltage_min, data.voltage_max, data.voltage_step)
+        hbox, voltage_input = self._create_controls("Voltage, V:", data.voltage_min, data.voltage_max,
+                                                    data.voltage_step)
         vbox.addLayout(hbox)
-        hbox, current_input = self._create_controls("Limiting current:",
-                                                        data.current_min, data.current_max, data.current_step)
+        if data.current_units == "micro":
+            current_step = data.current_step
+        elif data.current_units == "milli":
+            current_step = data.current_step / 1000
+        else:
+            current_step = data.current_step
+
+        hbox, current_input = self._create_controls("Limiting current, {}:".format(data.resolve_current_label()),
+                                                    data.current_min, data.current_max, current_step)
         vbox.addLayout(hbox)
 
-        def apply():
+
+        def setup():
             self.item.device.set_value(
                 voltage_input.value(),
                 current_input.value()
             )
+
+        def apply():
+            setup()
             self.item.device.update_value()
 
-        setup_btn = QPushButton("Apply")
-        setup_btn.clicked.connect(apply)
+        setup_and_turn_on = QPushButton("Setup&&Turn on")
+        setup_and_turn_on.clicked.connect(apply)
+        setup_btn = QPushButton("Setup")
+        setup_btn.clicked.connect(setup)
         reset_btn = QPushButton("Reset")
-        reset_btn.clicked.connect(lambda : self.item.device.reset_value())
+        reset_btn.clicked.connect(lambda: self.item.device.reset_value())
+
         hbox = QHBoxLayout()
+        hbox.addWidget(setup_and_turn_on)
         hbox.addWidget(setup_btn)
         hbox.addWidget(reset_btn)
         vbox.addLayout(hbox)
@@ -77,45 +102,33 @@ class HVWidget(QtWidgets.QWidget):
         return setup_box
 
 
+    def _create_indicator(self, name):
+        hbox = QHBoxLayout()
+        label = QLabel(name)
+        label.setStyleSheet(self.style_sheet)
+        display = QLCDNumber(7)
+        display.setSegmentStyle(QLCDNumber.Flat)
+        hbox.addWidget(display)
+        hbox.addWidget(label)
+        return hbox, display
 
-    def init_UI(self):
-        styleSheet  = "QLabel {font-size : 16pt}"
-        self.vbox = QVBoxLayout()
-
-
-        label = QLabel("Attenion!\nHV device save last voltage!\nTake care of yourself!")
-        label.setStyleSheet("QLabel {color : red}")
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        self.vbox.addWidget(label)
-        # Controls for display indicator
-        indicator_box = QGroupBox("Indicator")
+    def _create_indicator_box(self):
+        indicator_box = QGroupBox()
         vbox = QVBoxLayout()
-        # Controls for display voltage
-        hbox = QHBoxLayout()
-        label = QLabel("Voltage, V")
-        label.setStyleSheet(styleSheet)
-        self.voltage_display = QLCDNumber()
-        self.voltage_display.setSegmentStyle(QLCDNumber.Flat)
-        hbox.addWidget(self.voltage_display)
-        hbox.addWidget(label)
+        hbox, self.voltage_display = self._create_indicator("Voltage, V")
         vbox.addLayout(hbox)
-        # Controls for display current
-        hbox = QHBoxLayout()
-        label = QLabel("Current, {}".format(self.item.device.units_label))
-        label.setStyleSheet(styleSheet)
-        self.current_display = QLCDNumber(7)
-        self.current_display.setSegmentStyle(QLCDNumber.Flat)
-        self.current_display.resize(100, 100)
-        hbox.addWidget(self.current_display)
-        hbox.addWidget(label)
+        hbox, self.current_display = self._create_indicator("Current, {}".format(self.item.device.units_label))
         vbox.addLayout(hbox)
         indicator_box.setLayout(vbox)
-        self.vbox.addWidget(indicator_box)
+        return indicator_box
 
-        setup_box = self._create_controls_box()
-        self.vbox.addWidget(setup_box)
-        self.vbox.addStretch()
-        self.setLayout(self.vbox)
+    def init_UI(self):
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.attention_label)
+        vbox.addWidget(self._create_indicator_box())
+        vbox.addWidget(self._create_controls_box())
+        vbox.addStretch()
+        self.setLayout(vbox)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         I, U = self.item.device.get_IU()
@@ -127,17 +140,18 @@ class HVWidget(QtWidgets.QWidget):
         self.item.device.close()
 
 
-class DeviceList(QtWidgets.QWidget):
-    def __init__(self, tabpane, auto_init = True, parent = None):
+class DeviceList(QWidget):
+    def __init__(self, tabpane, auto_init=True, parent=None):
         super().__init__(parent)
         self.tabpane = tabpane
         self.init_UI(auto_init)
-        self.startTimer(60*1000, QtCore.Qt.VeryCoarseTimer)
+        self.startTimer(60 * 1000, QtCore.Qt.VeryCoarseTimer)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         self.refresh()
 
     def add_fake_device(self):
+        logging.root.info("Working with fake device")
         fake_device = create_test_device()
         HVItem(self.device_list, fake_device)
 
@@ -162,14 +176,14 @@ class DeviceList(QtWidgets.QWidget):
     def refresh(self):
         old = []
         for i in range(self.device_list.count()):
-            item = self.device_model.item(i)
+            item = self.device_list.item(i)
             old.append(item.device)
         new = HVDevice.find_new_devices(old)
         for dev in new:
             HVItem(self.device_list, dev)
 
     def open_device(self, index):
-        item : HVItem = self.device_list.item(index.row())
+        item: HVItem = self.device_list.item(index.row())
         widget = HVWidget(item)
         name = item.device.device.name
         dev_url = item.device.device.url
@@ -177,11 +191,34 @@ class DeviceList(QtWidgets.QWidget):
         item.device.open()
 
 
-class MainWidget(QtWidgets.QWidget):
-    def __init__(self,args, parent = None):
+class QtLogging(logging.Handler):
+    def __init__(self, logger):
+        super().__init__()
+        self.widget = QPlainTextEdit()
+        self.widget.setReadOnly(True)
+        self.widget.setWindowTitle("Log")
+        self.records = []
+        self.limit = 1000
+        logger.addHandler(self)
+
+    def emit(self, record):
+        msg = self.format(record)
+        if len(self.records) > self.limit:
+            self.records = self.records[int(self.limit/2):]
+            self.widget.clear()
+            self.widget.appendPlainText("\n".join(self.records))
+        self.records.append(msg)
+        self.widget.appendPlainText(msg)
+
+class MainWidget(QWidget):
+    def __init__(self, args, parent=None):
         super().__init__(parent)
         self.setStyleSheet("* {font-size: 12pt}")
+        self.init_UI(args)
+
+    def init_UI(self, args):
         hbox = QHBoxLayout()
+        self.setLayout(hbox)
         tabpane = QTabWidget(self)
         tabpane.setTabsClosable(True)
 
@@ -192,22 +229,32 @@ class MainWidget(QtWidgets.QWidget):
             del widget
 
         tabpane.tabCloseRequested.connect(close_tab)
-        device_list = DeviceList(tabpane, auto_init = not args.fake_device, parent = self)
+        device_list = DeviceList(tabpane, auto_init=not args.fake_device, parent=self)
         hbox.addWidget(device_list, stretch=10)
         hbox.addWidget(tabpane, stretch=20)
-        self.setLayout(hbox)
-
         if args.fake_device:
             device_list.add_fake_device()
 
-class HVWindow(QtWidgets.QMainWindow):
 
+class HVWindow(QMainWindow):
     ICON_PATH = RESOURCE_PATH / "basic_bolt.svg"
 
     def __init__(self, args):
         super().__init__()
+        self.qt_logging = QtLogging(logging.root)
         self.central = MainWidget(args)
         self.setCentralWidget(self.central)
         self.setMinimumSize(720, 480)
         self.setWindowTitle("HV-controls")
         self.setWindowIcon(QIcon(str(self.ICON_PATH)))
+        self.init_toolbar()
+
+    def init_toolbar(self):
+        toolbar = self.addToolBar('Toolbar')
+        action = QAction("Show log", self)
+
+        def open_log():
+            self.qt_logging.widget.show()
+
+        action.triggered.connect(open_log)
+        toolbar.addAction(action)
