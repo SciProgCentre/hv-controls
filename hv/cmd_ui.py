@@ -33,7 +33,7 @@ Type list for get list of device and nextly attach device
             if len(self.devices) > device_id:
                 self.device = self.devices[device_id]
                 self.device.open()
-                self.prompt = '(HV-controls, device {}): '.format(device_id)
+                self.prompt = '({}): '.format(self.device.device)
                 return
         except Exception:
             print("Bad device ID")

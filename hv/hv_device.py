@@ -1,5 +1,6 @@
 import abc
 import math
+import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
@@ -79,17 +80,24 @@ class HVDevice:
     def close(self):
         self.device.close()
 
-    def set_value(self, value):
-        value = round(value * self.data.codemax / self.data.voltage_max)
-        first_byte = value - math.trunc(value / 256) * 256
-        second_byte = math.trunc(value / 256)
-        self.device.write(HVDevice.SET_CODE, [first_byte, second_byte])
+    def set_value(self, voltage, current):
+        voltage = round(voltage * self.data.codemax_DAC / self.data.voltage_max)
+        first_byte_U = voltage - math.trunc(voltage / 256) * 256
+        second_byte_U = math.trunc(voltage / 256)
+
+        current = round(current * self.data.codemax_DAC / self.data.current_max)
+        first_byte_I = current - math.trunc(voltage / 256) * 256
+        second_byte_I = math.trunc(current / 256)
+        self.device.write(HVDevice.SET_CODE, [first_byte_U, second_byte_U,
+                                              first_byte_I, second_byte_I
+                                              ])
 
     def update_value(self):
         self.device.write(HVDevice.UPDATE_CODE)
 
     def reset_value(self):
         self.device.write(HVDevice.RESET_CODE)
+        time.sleep(1)
 
     def get_IU(self):
         """
@@ -103,15 +111,14 @@ class HVDevice:
         if temp[4] != 13:
             print("Bad read: ", temp)
             return 0, 0
-        U = (temp[2] * 256 + temp[3]) * self.data.voltage_max / self.data.voltage_max
+        ADC_mean_count = 16
+        U = (temp[2] * 256 + temp[3]) * self.data.voltage_max / self.data.codemax_ADC / ADC_mean_count
         if self.data.polarity == "N": U = -U
-        MAGIC_CONST = 4096 / 65535  # See Unit1.pas
-        I = (temp[0] * 256 + temp[1]) * MAGIC_CONST * self.data.sensor_resistance
-        k = 1
-        if self.data.current_units == "мА": k = 0.001
-        I = k * I
-        # Subtract feedback resistance current
-        I = I - abs(U * k / self.data.feedback_resistanse)
+        I = (temp[0] * 256 + temp[1]) * self.data.current_max / self.data.codemax_DAC
+        if self.data.current_units == "micro":
+            I = I - abs(U/ self.data.feedback_resistanse)
+        elif self.data.current_units == "milli":
+            I =I/1000
         return I, U
 
     def device_info(self, formatter=TextFormatter()):

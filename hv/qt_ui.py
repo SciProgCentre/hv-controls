@@ -23,49 +23,73 @@ class HVWidget(QtWidgets.QWidget):
         super().__init__()
         self.item = item
         self.init_UI()
-        # self.timer_id = self.startTimer(1000)
+        self.timer_id = self.startTimer(2000)
 
-    def init_UI(self):
-        styleSheet  = "QLabel {font-size : 16pt}"
-        self.vbox = QVBoxLayout()
+    def _create_controls(self, name, min, max, step):
+        vbox = QVBoxLayout()
+        hbox = QHBoxLayout()
+        spin_input = QDoubleSpinBox()
+        data = self.item.device.data
+        spin_input.setMinimum(min)
+        spin_input.setMaximum(max)
+        spin_input.setSingleStep(step)
 
+        slider = QSlider()
+        slider.setMaximum(int(min))
+        slider.setMaximum(int(max))
+        slider.setSingleStep(int(step))
+        slider.setOrientation(QtCore.Qt.Horizontal)
+        spin_input.valueChanged.connect(lambda x: slider.setValue(int(x)))
+        slider.valueChanged.connect(lambda x: spin_input.setValue(x))
+
+        vbox.addWidget(spin_input)
+        vbox.addWidget(slider)
+        label = QLabel(name)
+        hbox.addWidget(label)
+        hbox.addLayout(vbox)
+        return hbox, spin_input
+
+    def _create_controls_box(self):
+        data = self.item.device.data
         # Controls for setup voltage
         setup_box = QGroupBox("Voltage setup")
         vbox = QVBoxLayout()
-        hbox = QHBoxLayout()
-        voltage_input = QDoubleSpinBox()
-        data = self.item.device.data
-        voltage_input.setMinimum(data.voltage_min)
-        voltage_input.setMaximum(data.voltage_max)
-        voltage_input.setSingleStep(data.voltage_step)
-
-        slider = QSlider()
-        slider.setMaximum(int(data.voltage_min))
-        slider.setMaximum(int(data.voltage_max))
-        slider.setSingleStep(int(data.voltage_step))
-        slider.setOrientation(QtCore.Qt.Horizontal)
-        voltage_input.valueChanged.connect(lambda x: slider.setValue(int(x)))
-        slider.valueChanged.connect(lambda x: voltage_input.setValue(x))
+        hbox, voltage_input = self._create_controls("Voltage:",
+                                                        data.voltage_min, data.voltage_max, data.voltage_step)
+        vbox.addLayout(hbox)
+        hbox, current_input = self._create_controls("Voltage:",
+                                                        data.current_min, data.current_max, data.current_step)
+        vbox.addLayout(hbox)
 
         def apply():
-            self.item.device.set_value(voltage_input.value())
+            self.item.device.set_value(
+                voltage_input.value(),
+                current_input.value()
+            )
             self.item.device.update_value()
-
 
         setup_btn = QPushButton("Apply")
         setup_btn.clicked.connect(apply)
         reset_btn = QPushButton("Reset")
         reset_btn.clicked.connect(lambda : self.item.device.reset_value())
-        hbox.addWidget(voltage_input)
+        hbox = QHBoxLayout()
         hbox.addWidget(setup_btn)
         hbox.addWidget(reset_btn)
         vbox.addLayout(hbox)
-        vbox.addWidget(slider)
-
         setup_box.setLayout(vbox)
+        return setup_box
 
-        self.vbox.addWidget(setup_box)
 
+
+    def init_UI(self):
+        styleSheet  = "QLabel {font-size : 16pt}"
+        self.vbox = QVBoxLayout()
+
+
+        label = QLabel("Attenion!\nHV device save last voltage!\nTake care of yourself!")
+        label.setStyleSheet("QLabel {color : red}")
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        self.vbox.addWidget(label)
         # Controls for display indicator
         indicator_box = QGroupBox("Indicator")
         vbox = QVBoxLayout()
@@ -91,12 +115,12 @@ class HVWidget(QtWidgets.QWidget):
         indicator_box.setLayout(vbox)
         self.vbox.addWidget(indicator_box)
 
-        label = QLabel("Attenion!\nHV device save last voltage!\nTake care of yourself!")
-        label.setStyleSheet("QLabel {color : red}")
-        label.setAlignment(QtCore.Qt.AlignCenter)
+        setup_box = self._create_controls_box()
+        self.vbox.addWidget(setup_box)
+
 
         self.vbox.addStretch()
-        self.vbox.addWidget(label)
+
         self.setLayout(self.vbox)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
@@ -107,6 +131,7 @@ class HVWidget(QtWidgets.QWidget):
     def closeTab(self):
         self.killTimer(self.timer_id)
         self.item.device.close()
+
 
 class DeviceList(QtWidgets.QWidget):
     def __init__(self, parent = None, tabpane = None):
@@ -159,8 +184,8 @@ class DeviceList(QtWidgets.QWidget):
             item : HVItem = self.device_model.item(index.row(), index.column())
             widget = HVWidget(item)
             name = item.device.device.name
-            dev_id = item.device.device.device_id
-            self.tabpane.addTab(widget, "{}:{}".format(name, dev_id))
+            dev_url = item.device.device.url
+            self.tabpane.addTab(widget, "{}:{}".format(name, dev_url))
             item.device.open()
 
 
@@ -183,6 +208,7 @@ class MainWidget(QtWidgets.QWidget):
         widget.closeTab()
         del widget
 
+
 class HVWindow(QtWidgets.QMainWindow):
 
     ICON_PATH = pathlib.Path(RESOURCE_PATH, "basic_bolt.svg")
@@ -195,11 +221,6 @@ class HVWindow(QtWidgets.QMainWindow):
         self.setMinimumSize(720, 480)
         self.setWindowTitle("HV-controls")
         self.setWindowIcon(QIcon(str(self.ICON_PATH)))
-
-
-
-
-
 
 
 def main():

@@ -1,55 +1,60 @@
 import time
 from typing import Optional, Callable, List
 
-import pylibftdi as ftdi
+from pyftdi import ftdi
+from pyftdi.usbtools import UsbTools
+import pyftdi.serialext
+import serial
+from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.root
 
 class FTDIDevice:
 
     BAUDRATE = 38400
+    URLS = "ftdi"
 
-
-    def __init__(self, manufactuter, name, device_id):
-        self.device = None
-        self.manufactuter = manufactuter
+    def __init__(self, url, name):
+        self.port = None
         self.name = name
-        self.device_id = device_id
+        self.url = url
 
     def __str__(self):
-        return "{}:{}:{}".format(self.manufactuter, self.name, self.device_id)
+        return "{}: {}".format(self.name,self.url)
 
     def open(self):
-        self.device = ftdi.Device(self.device_id)
-        self.device.baudrate = FTDIDevice.BAUDRATE
-        result = self.device.ftdi_fn.ftdi_set_line_property(8,0,0)
-        if result != 0:
-            self.device = None
-            raise Exception("Can't initialize device")
-        self.device.open()
-        # OPS = 1
-        # self.device.ftdi_fn.ftdi_set_bitmode(OPS, 1)  # FIXME(Select correct bit mode)
+        self.port = pyftdi.serialext.serial_for_url(self.url, bytesize=EIGHTBITS, parity=PARITY_NONE, stopbits=STOPBITS_ONE, baudrate = 38400)
+        self.port.open()
+        logger.info("Open serial port for {}".format(self))
 
     def close(self):
-        self.device.close()
-        self.device = None
+        self.port.close()
+        self.port = None
+        logger.info("Close serial port for {}".format(self))
 
     def write(self, code : int, data: List[int]=None):
-        temp = bytes([code]+ data) if data is not None else bytes(code)
-        self.device.write(temp)
-        time.sleep(0.5)
+        logger.debug("Write method get code : {}, data : {}".format(code, data))
+        temp = bytes([code]+ data) if data is not None else bytes([code])
+        logger.debug("Write {}".format(temp))
+        self.port.write(temp)
 
     def read(self, nbytes) -> List[int]:
-        s = self.device.read(nbytes)
-        return [ord(c) for c in s] if type(s) is str else list(s)
+        time.sleep(0.5)
+        s = self.port.read(nbytes)
+        logger.debug("Read {}".format(s))
+        result = [ord(c) for c in s] if type(s) is str else list(s)
+        logger.debug("Convert read to {}".format(result))
+        return result
 
     @staticmethod
     def find_all_device(key: Optional[Callable] = None):
+        devspec = ftdi.Ftdi.list_devices()
+        urls = UsbTools.build_dev_strings(FTDIDevice.URLS, ftdi.Ftdi.VENDOR_IDS, ftdi.Ftdi.PRODUCT_IDS, devspec)
         devices = []
-        dev_list = filter(lambda x: key(x[0]), ftdi.Driver().list_devices())
-        for dev in dev_list:
-            devices.append(FTDIDevice(*dev))
+        for url, name in urls:
+            dev = FTDIDevice(url, name[1:-1])
+            devices.append(dev)
         return devices
 
     @staticmethod
