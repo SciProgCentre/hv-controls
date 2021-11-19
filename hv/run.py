@@ -11,7 +11,8 @@ def hv_controls_cmd(args):
 def hv_controls_qt(args):
     from PyQt5 import QtWidgets
     app = QtWidgets.QApplication(sys.argv)
-    app.setOrganizationName("NPM Group")
+    app.setOrganizationName("NPM_Group")
+    app.setOrganizationDomain("npm.mipt.ru")
     app.setApplicationName("HV-controls")
     from hv.qt_ui import HVWindow
     window = HVWindow(args)
@@ -21,7 +22,7 @@ def hv_controls_qt(args):
 
 def create_parser():
     parser = argparse.ArgumentParser("HV-controls")
-    parser.add_argument("--gui", action="store_true")
+    parser.add_argument("--no-gui", action="store_true")
     parser.add_argument("--fake-device", action="store_true")
     parser.add_argument("--debug", action="store_true")
     return parser
@@ -35,9 +36,9 @@ def app():
     else:
         logging.root.setLevel(logging.INFO)
 
-    if args.gui:
-        hv_controls_qt(args)
-    else:
+    if args.no_gui:
         logging.basicConfig(filename = "hv-controls.log")
         hv_controls_cmd(args)
+    else:
+        hv_controls_qt(args)
     return 0

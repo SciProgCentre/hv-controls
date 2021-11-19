@@ -1,0 +1,6 @@
+"Max voltage, kV", "Voltage coefficient", "Current coefficient, 6 W", "Current coefficient, 15 W", "Current coefficient, 60 W"
+2,32,21.33,8.533,2.133
+6,10.67,64,25.6,6.4
+10,6.4,106,42.4,10.6
+20,3.2,213.3,85.32,21.33
+30,2.133,320,128,32

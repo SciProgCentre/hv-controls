@@ -1,31 +1,40 @@
-import abc
+import logging
 import math
+import pathlib
 import time
 from dataclasses import dataclass
-from enum import Enum
 from typing import List
-
-import usb.core
-import os, sys
-import pathlib
-import random
 
 ROOT_PATH = pathlib.Path(__file__).parent.absolute()
 DEVICE_PATH = pathlib.Path(ROOT_PATH, "device_data")
 
 """
-Этот флаг определяет какой драйвер мы будет использовать FTD2XX или FTDI
-Они оба кросплатформенные, однако вероятнее FTD2XX лучше использовать на windows,а FTDI на *nix
-Полезные ссылки:
-https://iosoft.blog/2018/12/02/ftdi-python-part-1/
-https://iosoft.blog/2018/12/05/ftdi-python-part-2/
-https://iosoft.blog/2018/12/05/ftdi-python-part-3/
+Сейчас подключение к девайсу происходит через PyFTDI  и протестированно на Linux.
+Для корректной работы программы под Windows возможно потребуется реализация подключение через FTD2XX.
 """
 FTD2XX = False
 if FTD2XX:
     from hv.ftd2xx_device import FTD2XXDevice as Device
 else:
     from hv.ftdi_device import PyFTDIDevice as Device
+
+
+@dataclass
+class DeviceCoefficient:
+    max_voltage: int
+    voltage_coef: float
+    current_coef_6w: float
+    current_coef_15w: float
+    current_coef_60w: float
+
+    @staticmethod
+    def load_data(voltage):
+        with open(DEVICE_PATH / "data_from_protocol.csv") as fin:
+            fin.readline()
+            for line in fin.readlines():
+                line = line.split(",")
+                if int(line[0]) == voltage:
+                    return DeviceCoefficient(*tuple(map(float, line)))
 
 
 @dataclass
@@ -75,6 +84,7 @@ class DeviceData:
         else:
             return "μA"
 
+
 class HVDevice:
     MANUFACTUTER = "Mantigora"  # See Unit1.pas
 
@@ -88,40 +98,77 @@ class HVDevice:
         self.device = device
         self.data = data
         self.units_label = data.resolve_current_label()
+        self.init_coefficient()
+        self.is_open = False
+
+    def init_coefficient(self):
+        coeff = DeviceCoefficient.load_data(int(self.data.voltage_max / 1000))
+        self.voltage_coeff = coeff.voltage_coef
+        name: str = self.device.name
+        if name[:3] == "HT-":
+            power = int(name[3:5])  # Source power in Watt
+            if power == 6:
+                self.current_coef = coeff.current_coef_6w
+            elif power == 15:
+                self.current_coef = coeff.current_coef_15w
+            elif power == 60:
+                self.current_coef = coeff.current_coef_60w
+            else:
+                self.current_coef = None
+        else:
+            self.current_coef = None
 
     def __str__(self):
         return str(self.device)
 
     def open(self):
-        self.device.open()
+        try:
+            self.device.open()
+            self.is_open = True
+        except Exception as e:
+            logging.root.error(str(e))
 
     def close(self):
         self.device.close()
 
+    def _write(self, code, data=None):
+        try:
+            self.device.write(code, data)
+        except Exception as e:
+            self.is_open = False
+            logging.root.warning(str(e))
+
     def set_value(self, voltage, current):
-        voltage = round(voltage * self.data.codemax_DAC / self.data.voltage_max)
+        coeff = self.data.codemax_DAC / self.data.voltage_max
+        if not math.isclose(coeff, self.voltage_coeff, abs_tol=1e-2):
+            logging.root.warning("Voltage coefficients not consistent {}, {}".format(coeff, self.voltage_coeff))
+        voltage = round(voltage * coeff)
         first_byte_U = voltage - math.trunc(voltage / 256) * 256
         second_byte_U = math.trunc(voltage / 256)
 
-        current = round(current * self.data.codemax_DAC / self.data.current_max)
+        coeff = self.data.codemax_DAC / self.data.current_max
+        if self.current_coef is not None:
+            if not math.isclose(coeff, self.current_coef, abs_tol=1e-2):
+                logging.root.warning("Current coefficients not consistent {}, {}".format(coeff, self.current_coef))
+        current = round(current * coeff)
         first_byte_I = current - math.trunc(voltage / 256) * 256
         second_byte_I = math.trunc(current / 256)
-        self.device.write(HVDevice.SET_CODE, [first_byte_U, second_byte_U,
-                                              first_byte_I, second_byte_I
-                                              ])
+
+        self._write(HVDevice.SET_CODE, [first_byte_U, second_byte_U,
+                                        first_byte_I, second_byte_I])
 
     def update_value(self):
-        self.device.write(HVDevice.UPDATE_CODE)
+        self._write(HVDevice.UPDATE_CODE)
 
     def reset_value(self):
-        self.device.write(HVDevice.RESET_CODE)
+        self._write(HVDevice.RESET_CODE)
         time.sleep(1)
 
     def get_IU(self):
         """
         Return Current (microA or milliA) and Voltage (V)
         """
-        self.device.write(HVDevice.GET_CODE)
+        self._write(HVDevice.GET_CODE)
         temp = self.device.read(5)
         if temp is None or len(temp) < 5:
             print("Can not get data from device, data_array={}".format(str(temp)))
@@ -131,12 +178,13 @@ class HVDevice:
             return 0, 0
         ADC_mean_count = 16
         U = (temp[2] * 256 + temp[3]) * self.data.voltage_max / self.data.codemax_ADC / ADC_mean_count
-        if self.data.polarity == "N": U = -U
+        if self.data.polarity == "N":
+            U = -U
         I = (temp[0] * 256 + temp[1]) * self.data.current_max / self.data.codemax_DAC
         if self.data.current_units == "micro":
-            I = I - abs(U/ self.data.feedback_resistanse)
+            I = I - abs(U / self.data.feedback_resistanse)
         elif self.data.current_units == "milli":
-            I =I/1000
+            I = I / 1000
         return I, U
 
     @staticmethod
@@ -152,16 +200,23 @@ class HVDevice:
         return devices
 
 
-
-
 def create_test_device():
     from hv.ftdi_device import PyFTDIDevice
     dev = PyFTDIDevice("TEST", "HT-60-30-P")
     dev.open = lambda: print("open")
+
+    def fake_write(code,data=None):
+        print("Code:", code, "Data:", data)
+        if code == 2:
+            raise Exception
+
+    dev.write = fake_write
+
+    def fake_read(n):
+        print("Read:", n)
+        return [0xFF, 0xFF, 0xFF, 0xFF, 13]
+
+    dev.read = fake_read
     dev.close = lambda: print("close")
     dev = HVDevice(dev, DeviceData.load_device_data(dev.name))
-    dev.get_IU = lambda: (random.random(), random.random())
-    dev.set_value = lambda x,y: print(x,y)
-    dev.update_value = lambda: print("update")
-    dev.reset_value = lambda: print("reset")
     return dev

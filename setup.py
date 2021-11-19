@@ -20,8 +20,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points = {
       "console_scripts" : [
-          "hv-controls-cmd = hv.run:hv_controls_cmd",
-          "hv-controls-qt = hv.run:hv_controls_qt",
+          "hv-controls = hv.run:app"
       ]
     },
     package_data = { "hv" : ["data/*", "device_data/*"]},

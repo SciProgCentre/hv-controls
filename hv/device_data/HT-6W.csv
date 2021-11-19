@@ -1,0 +1,7 @@
+Name,"Code of max voltage, ADC","Code of max voltage, DAC","Max voltage, V","Min voltage, V","Voltage step, V","Current step,  mcA",Polarity,"Sensor resistance, kohm","Feedback resistanse, Mohm",Current min, mcA,Current max, mcA,Current units
+HT-6-6-P,4000,64000,6000,20,1,,P,4,100,4,1000,micro
+HT-6-6-N,4000,64000,6000,20,1,,P,4,100,4,1000,micro
+HT-6-10-P,4000,64000,10000,25,1,,P,6.65,1000,5,600,micro
+HT-6-10-N,4000,64000,10000,25,1,,N,6.65,1000,5,600,micro
+HT-6-20-P,4000,64000,20000,20,10,,P,13.3,5000,1,300,micro
+HT-6-20-N,4000,64000,20000,20,10,,N,13.3,5000,1,300,micro

@@ -12,6 +12,17 @@ Can be used for [Mantigora](http://mantigora.ru/highvolt_HV.htm) devices.
 
 ## For developers
 
+### Devices parameters
+
+Devices parameters located in `hv/device_data` and based on file `Unit1.pas`, inforamtion from vendor and specification of protocol. 
+
+Parameters of next devices isn't consistent:
+
+* *HT-15-10-P* and *HT-15-10-N*: max current 3000 mcA or 750 mcA?
+* _HT-6-*_ absent current step.
+* *HT4000*, *HT6000*, _HR*_ absent codemax ADC and DAC.
+
+### Code overview
 Файл `hv_device.py` содержит класс `HVDevice`, который принимает команды от консольного или графического интерфейса и превращает их в команды для низкоуровневых драйверов. Файлы `ftdi_device.py` и `ftd2xx_device.py` содержать классы-обертки над драйверами STDI и STD2XX (для него пока только заглушка).
 
 Файл `cmd_ui.py` предоставляет консольный интерфейс для управления прибором, будет полезен при отладке.
