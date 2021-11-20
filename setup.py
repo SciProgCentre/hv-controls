@@ -8,7 +8,7 @@ with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
 
 setuptools.setup(
     name="hv-controls",
-    version="0.0.1",
+    version="0.2.0",
     author="NPM Group",
     author_email="mihail.zelenyy@phystech.edu",
     url='http://npm.mipt.ru/',
@@ -30,11 +30,11 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ),
-    # project_urls={
-    #     "Bug Tracker": "",
-    #     "Documentation": "",
-    #     "Source Code": "",
-    # },
+    project_urls={
+        "Bug Tracker": "https://github.com/mipt-npm/hv-controls",
+        "Documentation": "https://github.com/mipt-npm/hv-controls",
+        "Source Code": "https://github.com/mipt-npm/hv-controls",
+    },
     install_requires=[
         "pyqt5",
         "pyftdi",

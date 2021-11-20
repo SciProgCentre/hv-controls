@@ -64,7 +64,7 @@ class HVWidget(QWidget):
         self.init_UI()
 
     def load_settings(self):
-        path = appdata() / "{}.json".format(self.item.device)
+        path = appdata() / "{}.json".format(str(self.item.device).replace("/", "_"))
         if path.exists():
             with path.open() as fin:
                 settings = json.load(fin)
@@ -74,7 +74,7 @@ class HVWidget(QWidget):
             return HVWidgetSettings(last_voltage=data.voltage_min, last_current=data.current_min)
 
     def save_settings(self):
-        path = appdata() / "{}.json".format(self.item.device)
+        path = appdata() / "{}.json".format(str(self.item.device).replace("/", "_"))
         with path.open("w") as fout:
             json.dump(dataclasses.asdict(self.settings), fout)
 

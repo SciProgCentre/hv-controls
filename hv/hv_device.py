@@ -151,7 +151,7 @@ class HVDevice:
             if not math.isclose(coeff, self.current_coef, abs_tol=1e-2):
                 logging.root.warning("Current coefficients not consistent {}, {}".format(coeff, self.current_coef))
         current = round(current * coeff)
-        first_byte_I = current - math.trunc(voltage / 256) * 256
+        first_byte_I = current - math.trunc(current / 256) * 256
         second_byte_I = math.trunc(current / 256)
 
         self._write(HVDevice.SET_CODE, [first_byte_U, second_byte_U,
@@ -189,13 +189,13 @@ class HVDevice:
 
     @staticmethod
     def find_all_devices() -> List["HVDevice"]:
-        devices = Device.find_all_device(lambda x: x == HVDevice.MANUFACTUTER)
+        devices = Device.find_all_device(lambda x: True)
         devices = [HVDevice(dev, DeviceData.load_device_data(dev.name)) for dev in devices]
         return devices  # + [create_test_device()]
 
     @staticmethod
     def find_new_devices(old) -> List["HVDevice"]:
-        devices = Device.find_new_device(old, lambda x: x == HVDevice.MANUFACTUTER)
+        devices = Device.find_new_device(old, lambda x: True)
         devices = [HVDevice(dev, DeviceData.load_device_data(dev.name)) for dev in devices]
         return devices
 

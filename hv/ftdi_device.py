@@ -19,18 +19,19 @@ class PyFTDIDevice:
         self.port = None
         self.name = name
         self.url = url
-        self.port = pyftdi.serialext.serial_for_url(self.url, bytesize=EIGHTBITS, parity=PARITY_NONE, stopbits=STOPBITS_ONE,
-                                                baudrate=38400, do_not_open=True)
+
     def __str__(self):
         return "{}:{}".format(self.name, self.url)
 
     def open(self):
+        self.port = pyftdi.serialext.serial_for_url(self.url, bytesize=EIGHTBITS, parity=PARITY_NONE,
+                                                    stopbits=STOPBITS_ONE,
+                                                    baudrate=38400, do_not_open=True)
         self.port.open()
         logger.info("Open serial port for {}".format(self))
 
     def close(self):
         self.port.close()
-        self.port = None
         logger.info("Close serial port for {}".format(self))
 
     def write(self, code : int, data: List[int]=None):
