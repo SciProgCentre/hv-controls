@@ -1,0 +1,16 @@
+*{
+  /*color: {{secondaryTextColor}};*/
+  font-family: {{font_family}};
+  /*line-height: {{line_height}};*/
+  font-size: {{font_size}};
+  /*selection-background-color: {{primaryLightColor}};*/
+  /*selection-color: {{primaryTextColor}};*/
+}
+
+QPushButton {
+  font-size: 12pt
+}
+
+QLabel {
+  font-size: 16pt
+}

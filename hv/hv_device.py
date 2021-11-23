@@ -53,6 +53,22 @@ class DeviceData:
     current_max: float
     current_units: str
 
+    def resolve_current_label(self):
+        if self.current_units == "micro":
+            return "μA"
+        elif self.current_units == "milli":
+            return "mA"
+        else:
+            return "μA"
+
+    def resolve_current_step(self):
+        if self.current_units == "micro":
+            return self.current_step
+        elif self.current_units == "milli":
+            return self.current_step / 1000
+        else:
+            return self.current_step
+
     @staticmethod
     def load_device_data(name):
         with open(pathlib.Path(DEVICE_PATH, "device_table.csv")) as fin:
@@ -75,15 +91,6 @@ class DeviceData:
                                       current_units=line[12].strip()
                                       )
         return None
-
-    def resolve_current_label(self):
-        if self.current_units == "micro":
-            return "μA"
-        elif self.current_units == "milli":
-            return "mA"
-        else:
-            return "μA"
-
 
 class HVDevice:
     MANUFACTUTER = "Mantigora"  # See Unit1.pas
@@ -201,22 +208,36 @@ class HVDevice:
 
 
 def create_test_device():
-    from hv.ftdi_device import PyFTDIDevice
-    dev = PyFTDIDevice("TEST", "HT-60-30-P")
-    dev.open = lambda: print("open")
 
-    def fake_write(code,data=None):
-        print("Code:", code, "Data:", data)
-        if code == 2:
-            raise Exception
+    class FakeDevice:
+        name = "HT-60-30-P"
+        data = [0xFF, 0xFF, 0xFF, 0xFF]
 
-    dev.write = fake_write
+        def __str__(self):
+            return self.name + "-TEST"
 
-    def fake_read(n):
-        print("Read:", n)
-        return [0xFF, 0xFF, 0xFF, 0xFF, 13]
+        def open(self):
+            print("open")
+            logging.root.info("Open device {}".format(self))
 
-    dev.read = fake_read
-    dev.close = lambda: print("close")
+        def close(self):
+            print("close")
+            logging.root.info("Close device {}".format(self))
+
+        def write(self, code,data=None):
+            print("Code:", code, "Data:", data)
+            logging.root.debug("Write method get code : {}, data : {}".format(code, data))
+            if code == 1:
+                self.data = data
+            elif code == 2:
+                pass
+                # raise Exception
+            elif code == 3:
+                self.data = [0,0,0,0]
+
+        def read(self, n):
+            print("Read:", n)
+            return self.data[2:] + self.data[0:2] + [13]
+    dev = FakeDevice()
     dev = HVDevice(dev, DeviceData.load_device_data(dev.name))
     return dev

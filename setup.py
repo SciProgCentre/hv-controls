@@ -38,6 +38,8 @@ setuptools.setup(
     install_requires=[
         "pyqt5",
         "pyftdi",
-        "ftd2xx"
+        "ftd2xx",
+        "matplotlib",
+        "Jinja2"
     ]
 )

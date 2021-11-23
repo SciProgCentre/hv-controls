@@ -10,11 +10,14 @@ def hv_controls_cmd(args):
 
 def hv_controls_qt(args):
     from PyQt5 import QtWidgets
+    from hv.qt_ui import HVWindow, materials_theme
     app = QtWidgets.QApplication(sys.argv)
+    # apply_stylesheet(app, theme="light_cyan_500.xml")
     app.setOrganizationName("NPM_Group")
     app.setOrganizationDomain("npm.mipt.ru")
     app.setApplicationName("HV-controls")
-    from hv.qt_ui import HVWindow
+    stylesheet = materials_theme()
+    app.setStyleSheet(stylesheet)
     window = HVWindow(args)
     window.show()
     return sys.exit(app.exec_())
