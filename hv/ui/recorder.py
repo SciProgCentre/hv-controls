@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton, QFileDialog
 
 
 class Recorder(QWidget):
@@ -12,26 +12,37 @@ class Recorder(QWidget):
     def init_UI(self):
         hbox = QHBoxLayout()
         self.setLayout(hbox)
-        self.field = QLineEdit(self.filename, self)
-        hbox.addWidget(self.field)
+        save_btn = QPushButton(self.style().standardIcon(self.style().SP_DirOpenIcon),"", self)
+        hbox.addWidget(save_btn)
+
+        field = QLineEdit(self.filename, self)
+        hbox.addWidget(field)
 
         def change_filename(new):
             self.filename = new
 
-        self.field.textChanged.connect(change_filename)
+        field.textChanged.connect(change_filename)
 
-        self.button = QPushButton("Start record", self)
-        hbox.addWidget(self.button)
+        def select_name():
+            name = QFileDialog.getSaveFileName(self, "Create/Select file for record")[0]
+            if name is not None or name != "":
+                field.setText(name)
+
+        save_btn.clicked.connect(select_name)
+
+        button = QPushButton("Start record", self)
+        hbox.addWidget(button)
+
         def turn():
             self.state = not self.state
             if self.state:
                 self.fout = open(self.filename, "a")
-                self.button.setText("Stop record")
+                button.setText("Stop record")
             else:
                 self.fout.close()
-                self.button.setText("Start record")
+                button.setText("Start record")
 
-        self.button.clicked.connect(turn)
+        button.clicked.connect(turn)
 
     def add_data(self, time, U, I):
         if self.state:

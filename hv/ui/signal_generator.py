@@ -1,26 +1,43 @@
 import dataclasses
+import itertools
+import pathlib
 from dataclasses import dataclass
 
 import numpy as np
-from PyQt5.QtCore import pyqtSignal, QObject, QTimer
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox
+from PyQt5 import QtCore
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QLabel, QDoubleSpinBox, \
+    QLineEdit, QFileDialog
 
 from hv.hv_device import HVDevice
 from hv.ui.regulator import HVRegulator
 from hv.ui.utils import HVWidgetSettings
-
+import os
 
 class Generator(QObject):
+
+    abort_signal = pyqtSignal()
+
+    MIN_PERIOD = 0.5
+    MIN_TICK = 0.1
+
     def __init__(self, name, device: HVDevice):
         super(Generator, self).__init__()
         self.name = name
         self.device = device
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
 
 
 class GeneratorWidget(QWidget):
     def __init__(self,parent, generator: Generator):
         super(GeneratorWidget, self).__init__(parent)
         self.generator = generator
+        self.generator.abort_signal.connect(self.stop)
 
     def start(self):
         self.setDisabled(True)
@@ -43,8 +60,7 @@ class ScanningParameters:
 
 class ScanningGenerator(Generator):
 
-    MIN_PERIOD = 0.5
-    MIN_TICK = 0.1
+
 
     def __init__(self, name, device : HVDevice, parameters: ScanningParameters):
         super(ScanningGenerator, self).__init__(name, device)
@@ -126,33 +142,123 @@ class ScanningWidget(GeneratorWidget):
 
 
 class SquareWave(ScanningGenerator):
+
+    def __init__(self, generator, parameters):
+        super(SquareWave, self).__init__("square wave", generator, parameters)
+
     def start(self):
         self.length = int(self.impulse_length()*1000)
         period = int(self.parameters.period*1000)
-        self.timer_period = self.startTimer(period)
+        self.timer_period = self.startTimer(period,  QtCore.Qt.PreciseTimer)
 
     def stop(self):
         self.killTimer(self.timer_period)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         if a0.timerId() == self.timer_period:
-            U, I = self.parameters.voltage, self.parameters.current
-            self.device.set_value(U, I)
-            self.device.update_value()
-            QTimer.singleShot(self.length, self.device.reset_value)
+            if self.device.is_open:
+                U, I = self.parameters.voltage, self.parameters.current
+                self.device.set_value(U, I)
+                self.device.update_value()
+                QTimer.singleShot(self.length, self.device.reset_value)
+            else:
+                self.abort_signal.emit()
 
 
 def square_wave_widget(parent, device: HVDevice, settings):
     if "square_wave" in settings.generators:
-        parameters = ScanningParameters(**settings.generators["square_vawe"])
+        parameters = ScanningParameters(**settings.generators["square_wave"])
     else:
         parameters = ScanningParameters(5, 0.5, device.data.voltage_min, device.data.current_min)
-    generator = SquareWave("square_wave", device, parameters)
+    generator = SquareWave(device, parameters)
     return ScanningWidget(parent, generator)
 
 
+class CustomGenerator(Generator):
+    path : pathlib.Path = None
+
+    def __init__(self, name, device: HVDevice):
+        super(CustomGenerator, self).__init__(name, device)
+
+    def start(self):
+        if self.path is not None:
+            from importlib.machinery import SourceFileLoader
+            user = SourceFileLoader(self.path.stem, str(self.path)).load_module()
+            self.period = user.PERIOD
+            self.func = user.generator
+            self.times = itertools.cycle([self.MIN_PERIOD*i for i in range(int(self.period/self.MIN_PERIOD))])
+            self.timer = self.startTimer(self.MIN_PERIOD*1000, QtCore.Qt.PreciseTimer)
+
+    def stop(self):
+        self.killTimer(self.timer)
+
+    def timerEvent(self, a0: 'QTimerEvent') -> None:
+        U, I = self.func(next(self.times))
+        print(U, I)
+        if self.device.is_open:
+            self.device.set_value(U, I)
+            self.device.update_value()
+        else:
+            self.abort_signal.emit()
+
+
+
+class CustomGeneratorWidget(GeneratorWidget):
+    def __init__(self, parent, generator: CustomGenerator, settings: HVWidgetSettings):
+        super(CustomGeneratorWidget, self).__init__(parent, generator)
+        self.settings = settings
+        generator.path = pathlib.Path(settings.last_custom_generator_module)
+        self.init_UI()
+
+    def init_UI(self):
+        vbox = QVBoxLayout()
+        self.setLayout(vbox)
+
+        field = QLineEdit(self.settings.last_custom_generator_module, self)
+        vbox.addWidget(field)
+
+        def change_filename(new):
+            self.settings.last_custom_generator_module = new
+            self.generator.path = pathlib.Path(new)
+
+        field.textChanged.connect(change_filename)
+
+        hbox = QHBoxLayout()
+        vbox.addLayout(hbox)
+        select_btn = QPushButton(self.style().standardIcon(self.style().SP_DirOpenIcon), "Select file", self)
+
+        def select_name():
+            name = QFileDialog.getOpenFileName(self, "Select file for generator")[0]
+            if name is not None or name != "":
+                field.setText(name)
+
+        select_btn.clicked.connect(select_name)
+
+
+        export_btn = QPushButton(self.style().standardIcon(self.style().SP_DialogSaveButton), "Export template", self)
+
+        def export():
+            name = QFileDialog.getSaveFileName(self, "Create new file with custom generator")[0]
+            if name is not None or name != "":
+                with open(name, "w") as fout:
+                    fout.write("\n\nPERIOD = 1 # seconds\n\n")
+                    fout.write("def generator(t):\n")
+                    fout.write('    """\n')
+                    fout.write('    t is current time in period, in seconds\n')
+                    fout.write('    Return Voltage(t) in Volts,Current(t) in {}\n'
+                               .format(self.generator.device.data.resolve_current_label()))
+                    fout.write('    """\n')
+                    fout.write("    return 0.0, 0.0\n")
+
+        export_btn.clicked.connect(export)
+
+        hbox.addWidget(export_btn)
+        hbox.addWidget(select_btn)
+
+
 GENERATOR_FACTORY = {
-    "square wave" : square_wave_widget
+    "square wave" : square_wave_widget,
+    "custom" : lambda parent, device , settings : CustomGeneratorWidget(parent, CustomGenerator("custom", device), settings)
 }
 
 
@@ -168,10 +274,13 @@ class SignalGeneratorWidget(QWidget):
 
     def change_generator(self, name):
         if not self.state:
+            self.settings.last_generator = name
+            self.current_generator.save_settings(self.settings)
             layout = self.layout()
+            self.current_generator.hide()
             layout.removeWidget(self.current_generator)
             self.current_generator = GENERATOR_FACTORY[name](self,self.device, self.settings)
-            self.layout().addWidget(self.current_generator)
+            layout.addWidget(self.current_generator)
 
     def init_UI(self):
         vbox = QVBoxLayout()
@@ -191,9 +300,12 @@ class SignalGeneratorWidget(QWidget):
         button.clicked.connect(turn)
         vbox.addWidget(button)
         generator_type = QComboBox(self)
+        current_indx = 0
         for i, key in enumerate(GENERATOR_FACTORY.keys()):
             generator_type.insertItem(i, key)
+            if self.settings.last_generator == key:
+                current_indx = i
         vbox.addWidget(generator_type)
-
         generator_type.currentIndexChanged.connect(lambda x: self.change_generator(generator_type.itemText(x)))
+        generator_type.setCurrentIndex(current_indx)
         vbox.addWidget(self.current_generator)

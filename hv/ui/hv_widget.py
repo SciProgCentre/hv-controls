@@ -48,7 +48,8 @@ class HVWidget(QWidget):
         vbox.addWidget(self.indicator)
         self.record = Recorder(self, self.settings.last_file)
         vbox.addWidget(self.record)
-        vbox.addWidget(HVSourceSetup(self, self.item, self.settings))
+        self.source_setup = HVSourceSetup(self, self.item.device, self.settings)
+        vbox.addWidget(self.source_setup)
         self.connection_loss_label = ConnectionLostLabel()
         vbox.addWidget(self.connection_loss_label)
         vbox.addStretch()
@@ -58,7 +59,7 @@ class HVWidget(QWidget):
         self._oscilloscope = Oscilloscope(self, data.resolve_current_label())
         vbox.addWidget(self._oscilloscope)
         vbox.addStretch()
-        self.timer_id = self.startTimer(2000)
+        self.timer_id = self.startTimer(2000,  QtCore.Qt.PreciseTimer)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         if self.item.device.is_open:
@@ -89,4 +90,6 @@ class HVWidget(QWidget):
                 self.item.device.reset_value()
         self.item.device.close()
         self.settings.last_file = self.record.filename
+        self.settings.last_generator = self.source_setup.generator.current_generator.generator.name
+        self.source_setup.generator.current_generator.save_settings(self.settings)
         HVWidgetSettings.save_settings(str(self.item.device), self.settings)

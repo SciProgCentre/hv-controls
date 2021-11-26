@@ -65,11 +65,12 @@ class Oscilloscope(QWidget):
         hbox.addWidget(save_btn)
 
         def save():
-            name = QFileDialog.getSaveFileName(self, "Save oscilloscope buffer.")
-            with open(name[0], "w") as fout:
-                fout.write('"{}","{}","{}"\n'.format("Unix time, s", "Voltage, kV", "Current, {}".format(self.current_units)))
-                for time, U, I in zip(self.times, self.voltage, self.current):
-                    fout.write("{},{},{}\n".format(time, U, I))
+            name = QFileDialog.getSaveFileName(self, "Save oscilloscope buffer.")[0]
+            if name is not None or name!="":
+                with open(name, "w") as fout:
+                    fout.write('"{}","{}","{}"\n'.format("Unix time, s", "Voltage, kV", "Current, {}".format(self.current_units)))
+                    for time, U, I in zip(self.times, self.voltage, self.current):
+                        fout.write("{},{},{}\n".format(time, U, I))
 
         save_btn.clicked.connect(save)
 

@@ -44,8 +44,9 @@ class HVWidgetSettings:
     last_file: str = "data.csv"
     auto_reset: bool = True
     manual_mode: bool = True
-    last_generator = "square wave"
+    last_generator: str = "square wave"
     generators : dict = dataclasses.field(default_factory=dict)
+    last_custom_generator_module: str = ""
 
     @staticmethod
     def load_settings(name, default_data):

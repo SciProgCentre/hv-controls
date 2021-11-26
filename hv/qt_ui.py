@@ -4,11 +4,13 @@ import pathlib
 import jinja2
 from PyQt5 import QtCore
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtHelp import QHelpEngine
+from PyQt5.QtWidgets import QMainWindow, QDockWidget
 from PySide2.QtGui import QFontDatabase
 
 from hv.ui.central_widget import HVCentralWidget
 from hv.ui.device_list import DeviceList
+from hv.ui.help import Help
 from hv.ui.utils import QtLogging
 from hv.ui.widgets import HVItem
 
@@ -35,11 +37,12 @@ def materials_theme():
 
 class HVWindow(QMainWindow):
     ICON_PATH = RESOURCE_PATH / "basic_bolt.svg"
+    HELP_PATH = RESOURCE_PATH / "help.md"
 
     def __init__(self, args):
         super().__init__()
         self.qt_logging = QtLogging(self, logging.root)
-        self.setMinimumSize(1280, 640)
+        self.setMinimumSize(1280, 720)
         self.setWindowTitle("HV-controls")
         self.setWindowIcon(QIcon(str(self.ICON_PATH)))
         self.init_UI(args)
@@ -53,6 +56,7 @@ class HVWindow(QMainWindow):
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, device_list)
         toolbar.addAction(device_list.toggleViewAction())
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.qt_logging.widget)
+        self.qt_logging.widget.setVisible(False)
         toolbar.addAction(self.qt_logging.widget.toggleViewAction())
 
         central = HVCentralWidget(self)
@@ -63,3 +67,10 @@ class HVWindow(QMainWindow):
 
         device_list.device_list.doubleClicked.connect(open_device)
         self.setCentralWidget(central)
+
+        help = Help(self, self.HELP_PATH)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, help)
+        help.setVisible(False)
+        toolbar.addAction(help.toggleViewAction())
+
+

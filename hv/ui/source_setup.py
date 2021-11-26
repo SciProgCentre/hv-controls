@@ -1,15 +1,15 @@
 from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout
 
+from hv.hv_device import HVDevice
 from hv.ui.basic_setup import HVBasicSetup
 from hv.ui.signal_generator import SignalGeneratorWidget
 from hv.ui.utils import HVWidgetSettings
-from hv.ui.widgets import HVItem
 
 
 class HVSourceSetup(QGroupBox):
-    def __init__(self, parent, item: HVItem, settings: HVWidgetSettings):
+    def __init__(self, parent, device: HVDevice, settings: HVWidgetSettings):
         super(HVSourceSetup, self).__init__(parent)
-        self.item = item
+        self.device = device
         self.settings = settings
         self.init_UI()
 
@@ -39,8 +39,8 @@ class HVSourceSetup(QGroupBox):
         switch_btn = self._create_switch_button()
         vbox.addWidget(switch_btn)
 
-        self.generator = SignalGeneratorWidget(self, self.item.device, self.settings)
-        self.basic_setup = HVBasicSetup(self, self.item, self.settings)
+        self.generator = SignalGeneratorWidget(self, self.device, self.settings)
+        self.basic_setup = HVBasicSetup(self, self.device, self.settings)
         if self.settings.manual_mode:
             self.generator.hide()
         else:
