@@ -367,16 +367,7 @@ class SignalGeneratorWidget(QWidget):
 
         button = QPushButton("Turn on\ngenerator")
 
-        def turn():
-            self.state = not self.state
-            if self.state:
-                button.setText("Turn off\ngenerator")
-                self.current_generator.start()
-            else:
-                button.setText("Turn on\ngenerator")
-                self.current_generator.stop()
 
-        button.clicked.connect(turn)
         vbox.addWidget(button)
         generator_type = QComboBox(self)
         current_indx = 0
@@ -388,3 +379,15 @@ class SignalGeneratorWidget(QWidget):
         generator_type.currentIndexChanged.connect(lambda x: self.change_generator(generator_type.itemText(x)))
         generator_type.setCurrentIndex(current_indx)
         vbox.addWidget(self.current_generator)
+
+        def turn():
+            self.state = not self.state
+            generator_type.setDisabled(self.state)
+            if self.state:
+                button.setText("Turn off\ngenerator")
+                self.current_generator.start()
+            else:
+                button.setText("Turn on\ngenerator")
+                self.current_generator.stop()
+
+        button.clicked.connect(turn)
