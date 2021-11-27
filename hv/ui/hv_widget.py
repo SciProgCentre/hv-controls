@@ -52,7 +52,7 @@ class HVWidget(QWidget):
         vbox.addWidget(self.source_setup)
         self.connection_loss_label = ConnectionLostLabel()
         vbox.addWidget(self.connection_loss_label)
-        vbox.addStretch()
+        vbox.addStretch(20)
 
         vbox = QVBoxLayout()
         hbox.addLayout(vbox)

@@ -169,7 +169,6 @@ class HVDevice:
 
     def reset_value(self):
         self._write(HVDevice.RESET_CODE)
-        time.sleep(1)
 
     def get_IU(self):
         """

@@ -26,7 +26,8 @@ class PyFTDIDevice:
     def open(self):
         self.port = pyftdi.serialext.serial_for_url(self.url, bytesize=EIGHTBITS, parity=PARITY_NONE,
                                                     stopbits=STOPBITS_ONE,
-                                                    baudrate=38400, do_not_open=True)
+                                                    baudrate=38400, do_not_open=True,
+                                                    timeout=0.2)
         self.port.open()
         logger.info("Open serial port for {}".format(self))
 
@@ -35,13 +36,13 @@ class PyFTDIDevice:
         logger.info("Close serial port for {}".format(self))
 
     def write(self, code : int, data: List[int]=None):
-        logger.debug("Write method get code : {}, data : {}".format(code, data))
-        temp = bytes([code]+ data) if data is not None else bytes([code])
-        logger.debug("Write {}".format(temp))
+        temp = bytes([code] + data) if data is not None else bytes([code])
         self.port.write(temp)
+        logger.debug("Write method get code : {}, data : {}".format(code, data))
+        logger.debug("Write {}".format(temp))
+
 
     def read(self, nbytes) -> List[int]:
-        time.sleep(0.3)
         s = self.port.read(nbytes)
         logger.debug("Read {}".format(s))
         result = [ord(c) for c in s] if type(s) is str else list(s)

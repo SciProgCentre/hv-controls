@@ -11,7 +11,7 @@ class DeviceList(QDockWidget):
     def __init__(self,parent,args):
         super().__init__("Device list", parent)
         self.init_UI(args)
-        self.startTimer(60 * 1000, QtCore.Qt.VeryCoarseTimer)
+
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         self.refresh()
@@ -33,6 +33,8 @@ class DeviceList(QDockWidget):
             self.add_fake_device()
         else:
             self.init_model()
+            # TODO(Autorefresh checkbox)
+            # self.startTimer(60 * 1000, QtCore.Qt.VeryCoarseTimer)
 
         self.refresh_btn = QPushButton("Refresh\ndevice list")
         self.refresh_btn.clicked.connect(self.refresh)

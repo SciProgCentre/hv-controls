@@ -8,5 +8,6 @@ class Help(QDockWidget):
         super(Help, self).__init__("Help",parent)
         browser = QTextBrowser(self)
         self.setWidget(browser)
-        with file.open("r") as fin:
-            browser.setMarkdown(fin.read())
+        # TODO(HTML HELP)
+        # with file.open("r") as fin:
+        #     browser.setMarkdown(fin.read())

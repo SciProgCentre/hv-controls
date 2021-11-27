@@ -1,7 +1,9 @@
 import dataclasses
 import itertools
+import math
 import pathlib
 from dataclasses import dataclass
+from enum import Enum, auto
 
 import numpy as np
 from PyQt5 import QtCore
@@ -18,8 +20,9 @@ class Generator(QObject):
 
     abort_signal = pyqtSignal()
 
-    MIN_PERIOD = 0.5
-    MIN_TICK = 0.1
+    MIN_PERIOD = 1.0
+    MAX_PERIOD = MIN_PERIOD*1_000
+    MIN_TICK = 0.2
 
     def __init__(self, name, device: HVDevice):
         super(Generator, self).__init__()
@@ -59,8 +62,6 @@ class ScanningParameters:
 
 
 class ScanningGenerator(Generator):
-
-
 
     def __init__(self, name, device : HVDevice, parameters: ScanningParameters):
         super(ScanningGenerator, self).__init__(name, device)
@@ -108,6 +109,7 @@ class ScanningWidget(GeneratorWidget):
         period_input = QDoubleSpinBox()
         period_input.setMinimum(self.generator.MIN_PERIOD)
         period_input.setSingleStep(self.generator.MIN_TICK)
+        period_input.setMaximum(self.generator.MAX_PERIOD)
         period_input.setValue(self.parameters.period)
         hbox.addWidget(period_input)
 
@@ -116,12 +118,17 @@ class ScanningWidget(GeneratorWidget):
         hbox.addWidget(QLabel("Duty cycle: "))
         duty_cycle_input = QDoubleSpinBox()
         duty_cycle_input.setMinimum(self.generator.min_duty_cycle())
+        duty_cycle_input.setMaximum(1.0)
         duty_cycle_input.setSingleStep(self.generator.duty_cycle_step())
         duty_cycle_input.setValue(self.parameters.duty_cycle)
         hbox.addWidget(duty_cycle_input)
 
         def period(value):
             self.parameters.period = value
+            duty_cycle = duty_cycle_input.value()
+            duty_cycle_input.setMinimum(self.generator.min_duty_cycle())
+            duty_cycle_input.setSingleStep(self.generator.duty_cycle_step())
+            duty_cycle_input.setValue(duty_cycle)
 
         period_input.valueChanged.connect(period)
 
@@ -143,8 +150,8 @@ class ScanningWidget(GeneratorWidget):
 
 class SquareWave(ScanningGenerator):
 
-    def __init__(self, generator, parameters):
-        super(SquareWave, self).__init__("square wave", generator, parameters)
+    def __init__(self, device, parameters):
+        super(SquareWave, self).__init__("square wave", device, parameters)
 
     def start(self):
         self.length = int(self.impulse_length()*1000)
@@ -153,6 +160,7 @@ class SquareWave(ScanningGenerator):
 
     def stop(self):
         self.killTimer(self.timer_period)
+        # TODO(AUTORESET?)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         if a0.timerId() == self.timer_period:
@@ -166,11 +174,80 @@ class SquareWave(ScanningGenerator):
 
 
 def square_wave_widget(parent, device: HVDevice, settings):
-    if "square_wave" in settings.generators:
-        parameters = ScanningParameters(**settings.generators["square_wave"])
+    if "square wave" in settings.generators:
+        parameters = ScanningParameters(**settings.generators["square wave"])
     else:
         parameters = ScanningParameters(5, 0.5, device.data.voltage_min, device.data.current_min)
     generator = SquareWave(device, parameters)
+    return ScanningWidget(parent, generator)
+
+class RawtoothState(Enum):
+    START = auto()
+    RISE = auto()
+    IMPULSE = auto()
+    ZERO = auto()
+
+class RawtoothWave(ScanningGenerator):
+
+    def __init__(self, device, parameters):
+        super(RawtoothWave, self).__init__("rawtooth wave", device, parameters)
+        self.MIN_TICK = 0.5
+        self.current_time = 0.0
+
+    def start(self):
+        voltage = self.parameters.voltage
+        self.current_impulse_length = self.impulse_length()
+        coeff = voltage / self.current_impulse_length
+        self.current_time = 0.0
+        self.voltage_step = self.MIN_TICK*coeff
+        self.voltage_accuracy = 2*self.device.data.voltage_step
+        self.voltage = self.parameters.voltage
+        self.state = RawtoothState.START
+        self.timer_id  = self.startTimer(self.MIN_TICK*1000, QtCore.Qt.PreciseTimer)
+
+    def stop(self):
+        self.killTimer(self.timer_id)
+
+    def timerEvent(self, a0: 'QTimerEvent') -> None:
+        if self.device.is_open:
+            self.current_time += self.MIN_TICK
+            if self.state == RawtoothState.START:
+                self.device.set_value(self.voltage, self.parameters.current)
+                self.device.update_value()
+                self.state = RawtoothState.RISE
+            elif self.state == RawtoothState.ZERO:
+                if self.current_time > self.parameters.period:
+                    self.current_time = 0
+                    self.voltage = self.parameters.voltage
+                    self.state = RawtoothState.START
+            else:
+                if self.state == RawtoothState.RISE:
+                    I, U = self.device.get_IU()
+                    if U > self.voltage or math.isclose(U, self.voltage, abs_tol=self.voltage_accuracy):
+                      self.state = RawtoothState.IMPULSE
+
+                if self.state == RawtoothState.IMPULSE:
+                    self.device.set_value(self.voltage, self.parameters.current)
+                    self.device.update_value()
+                    self.voltage -= self.voltage_step
+                    if self.voltage < 0:
+                        self.voltage = 0
+
+                if self.current_time >= self.current_impulse_length:
+                    self.state = RawtoothState.ZERO
+                    if self.voltage > 0:
+                        self.device.reset_value()
+        else:
+            self.abort_signal.emit()
+
+
+
+def rawtooth_wave_widget(parent, device: HVDevice, settings):
+    if "rawtooth wave" in settings.generators:
+        parameters = ScanningParameters(**settings.generators["rawtooth wave"])
+    else:
+        parameters = ScanningParameters(5, 0.5, device.data.voltage_min, device.data.current_min)
+    generator =RawtoothWave(device, parameters)
     return ScanningWidget(parent, generator)
 
 
@@ -179,6 +256,7 @@ class CustomGenerator(Generator):
 
     def __init__(self, name, device: HVDevice):
         super(CustomGenerator, self).__init__(name, device)
+        self.MIN_TICK = 0.5
 
     def start(self):
         if self.path is not None:
@@ -187,7 +265,7 @@ class CustomGenerator(Generator):
             self.period = user.PERIOD
             self.func = user.generator
             self.times = itertools.cycle([self.MIN_PERIOD*i for i in range(int(self.period/self.MIN_PERIOD))])
-            self.timer = self.startTimer(self.MIN_PERIOD*1000, QtCore.Qt.PreciseTimer)
+            self.timer = self.startTimer(self.MIN_TICK*1000, QtCore.Qt.PreciseTimer)
 
     def stop(self):
         self.killTimer(self.timer)
@@ -258,6 +336,7 @@ class CustomGeneratorWidget(GeneratorWidget):
 
 GENERATOR_FACTORY = {
     "square wave" : square_wave_widget,
+    "rawtooth wave" : rawtooth_wave_widget,
     "custom" : lambda parent, device , settings : CustomGeneratorWidget(parent, CustomGenerator("custom", device), settings)
 }
 

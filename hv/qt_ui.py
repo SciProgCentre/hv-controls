@@ -5,8 +5,8 @@ import jinja2
 from PyQt5 import QtCore
 from PyQt5.QtGui import QIcon
 from PyQt5.QtHelp import QHelpEngine
-from PyQt5.QtWidgets import QMainWindow, QDockWidget
-from PySide2.QtGui import QFontDatabase
+from PyQt5.QtWidgets import QMainWindow, QDockWidget, QDesktopWidget
+from PyQt5.QtGui import QFontDatabase
 
 from hv.ui.central_widget import HVCentralWidget
 from hv.ui.device_list import DeviceList
@@ -42,7 +42,9 @@ class HVWindow(QMainWindow):
     def __init__(self, args):
         super().__init__()
         self.qt_logging = QtLogging(self, logging.root)
-        self.setMinimumSize(1280, 720)
+        desktop = QDesktopWidget()
+        size = desktop.availableGeometry()
+        self.setMinimumSize(size.width(), size.height())
         self.setWindowTitle("HV-controls")
         self.setWindowIcon(QIcon(str(self.ICON_PATH)))
         self.init_UI(args)
