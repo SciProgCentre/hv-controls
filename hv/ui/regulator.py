@@ -20,7 +20,7 @@ class HVRegulator(QWidget):
         slider = QSlider(self)
         slider.setRange(int(min_input / step), int(max_input / step))
         slider.setOrientation(QtCore.Qt.Horizontal)
-
+        self.slider = slider
         spin_input.valueChanged.connect(lambda x: slider.setValue(int(x / step)))
         slider.valueChanged.connect(lambda x: spin_input.setValue(x * step))
         spin_input.setValue(default)
@@ -31,6 +31,9 @@ class HVRegulator(QWidget):
         hbox.addLayout(vbox)
         self.setLayout(hbox)
 
+    def set_maximum(self, value):
+        self.slider.setMaximum(value)
+        self.input.setMaximum(value)
 
     def value(self):
         return self.input.value()

@@ -47,3 +47,5 @@ class HVSourceSetup(QGroupBox):
             self.basic_setup.hide()
         vbox.addWidget(self.generator)
         vbox.addWidget(self.basic_setup)
+
+        self.generator.state_signal.connect(lambda x: switch_btn.setDisabled(x))

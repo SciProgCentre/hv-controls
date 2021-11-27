@@ -5,7 +5,6 @@ import pathlib
 from dataclasses import dataclass
 from enum import Enum, auto
 
-import numpy as np
 from PyQt5 import QtCore
 from PyQt5.QtCore import QObject, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QLabel, QDoubleSpinBox, \
@@ -14,7 +13,6 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxL
 from hv.hv_device import HVDevice
 from hv.ui.regulator import HVRegulator
 from hv.ui.utils import HVWidgetSettings
-import os
 
 class Generator(QObject):
 
@@ -22,12 +20,13 @@ class Generator(QObject):
 
     MIN_PERIOD = 1.0
     MAX_PERIOD = MIN_PERIOD*1_000
-    MIN_TICK = 0.2
+    MIN_TICK = 0.5
 
     def __init__(self, name, device: HVDevice):
         super(Generator, self).__init__()
         self.name = name
         self.device = device
+        self.voltage_accuracy = self.device.data.voltage_step
 
     def start(self):
         pass
@@ -35,12 +34,20 @@ class Generator(QObject):
     def stop(self):
         pass
 
+    def setup(self, voltage=0.0, current=0.0):
+        if math.isclose(voltage, 0.0, abs_tol=self.voltage_accuracy):
+            self.device.reset_value()
+        else:
+            self.device.set_value(voltage, current)
+            self.device.update_value()
+
 
 class GeneratorWidget(QWidget):
     def __init__(self,parent, generator: Generator):
         super(GeneratorWidget, self).__init__(parent)
         self.generator = generator
         self.generator.abort_signal.connect(self.stop)
+
 
     def start(self):
         self.setDisabled(True)
@@ -57,7 +64,8 @@ class GeneratorWidget(QWidget):
 class ScanningParameters:
     period : float
     duty_cycle : float
-    voltage : float
+    min_voltage: float
+    max_voltage : float
     current: float
 
 
@@ -89,10 +97,21 @@ class ScanningWidget(GeneratorWidget):
     def _create_voltage(self):
         """Controls for setup voltage"""
         data = self.generator.device.data
-        voltage_input = HVRegulator(self, "Voltage, V:", data.voltage_min, data.voltage_max,
-                                    data.voltage_step, self.parameters.voltage)
-        voltage_input.valueChanged.connect(lambda x: self.parameters.__setattr__("voltage", x))
-        return voltage_input
+        min_voltage_input = HVRegulator(self, "Min Voltage, V:", 0.0, data.voltage_min,
+                                    data.voltage_step, self.parameters.max_voltage)
+        max_voltage_input = HVRegulator(self, "Max Voltage, V:", data.voltage_min, data.voltage_max,
+                                    data.voltage_step, self.parameters.max_voltage)
+
+        def min_voltage(x):
+            self.parameters.min_voltage = x
+
+        def max_voltage(x):
+            self.parameters.max_voltage = x
+            min_voltage_input.set_maximum(x)
+
+        min_voltage_input.valueChanged.connect(min_voltage)
+        max_voltage_input.valueChanged.connect(max_voltage)
+        return min_voltage_input, max_voltage_input
 
     def _create_current(self):
         data = self.generator.device.data
@@ -137,13 +156,13 @@ class ScanningWidget(GeneratorWidget):
 
         duty_cycle_input.valueChanged.connect(duty_cycle)
 
-
     def init_UI(self):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
-        voltage_input = self._create_voltage()
+        min_voltage_input, max_voltage_input = self._create_voltage()
         current_input = self._create_current()
-        vbox.addWidget(voltage_input)
+        vbox.addWidget(min_voltage_input)
+        vbox.addWidget(max_voltage_input)
         vbox.addWidget(current_input)
         self._create_time_parameters(vbox)
 
@@ -165,10 +184,8 @@ class SquareWave(ScanningGenerator):
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         if a0.timerId() == self.timer_period:
             if self.device.is_open:
-                U, I = self.parameters.voltage, self.parameters.current
-                self.device.set_value(U, I)
-                self.device.update_value()
-                QTimer.singleShot(self.length, self.device.reset_value)
+                self.setup(self.parameters.max_voltage, self.parameters.current)
+                QTimer.singleShot(self.length, lambda : self.setup(self.parameters.min_voltage, self.parameters.current))
             else:
                 self.abort_signal.emit()
 
@@ -177,7 +194,7 @@ def square_wave_widget(parent, device: HVDevice, settings):
     if "square wave" in settings.generators:
         parameters = ScanningParameters(**settings.generators["square wave"])
     else:
-        parameters = ScanningParameters(5, 0.5, device.data.voltage_min, device.data.current_min)
+        parameters = ScanningParameters(5, 0.5, 0.0, device.data.voltage_min, device.data.current_min)
     generator = SquareWave(device, parameters)
     return ScanningWidget(parent, generator)
 
@@ -191,17 +208,14 @@ class RawtoothWave(ScanningGenerator):
 
     def __init__(self, device, parameters):
         super(RawtoothWave, self).__init__("rawtooth wave", device, parameters)
-        self.MIN_TICK = 0.5
-        self.current_time = 0.0
 
     def start(self):
-        voltage = self.parameters.voltage
-        self.current_impulse_length = self.impulse_length()
-        coeff = voltage / self.current_impulse_length
         self.current_time = 0.0
+        self.current_impulse_length = self.impulse_length()
+        self.max_voltage = self.parameters.max_voltage
+        self.min_voltage = self.parameters.min_voltage
+        coeff = (self.max_voltage - self.min_voltage) / self.current_impulse_length
         self.voltage_step = self.MIN_TICK*coeff
-        self.voltage_accuracy = 2*self.device.data.voltage_step
-        self.voltage = self.parameters.voltage
         self.state = RawtoothState.START
         self.timer_id  = self.startTimer(self.MIN_TICK*1000, QtCore.Qt.PreciseTimer)
 
@@ -218,7 +232,7 @@ class RawtoothWave(ScanningGenerator):
             elif self.state == RawtoothState.ZERO:
                 if self.current_time > self.parameters.period:
                     self.current_time = 0
-                    self.voltage = self.parameters.voltage
+                    self.voltage = self.parameters.max_voltage
                     self.state = RawtoothState.START
             else:
                 if self.state == RawtoothState.RISE:
@@ -249,7 +263,6 @@ def rawtooth_wave_widget(parent, device: HVDevice, settings):
         parameters = ScanningParameters(5, 0.5, device.data.voltage_min, device.data.current_min)
     generator =RawtoothWave(device, parameters)
     return ScanningWidget(parent, generator)
-
 
 class CustomGenerator(Generator):
     path : pathlib.Path = None
@@ -343,6 +356,8 @@ GENERATOR_FACTORY = {
 
 class SignalGeneratorWidget(QWidget):
 
+    state_signal = pyqtSignal(bool)
+
     def __init__(self, parent, device: HVDevice, settings: HVWidgetSettings):
         super(SignalGeneratorWidget, self).__init__(parent)
         self.state = False
@@ -382,6 +397,7 @@ class SignalGeneratorWidget(QWidget):
 
         def turn():
             self.state = not self.state
+            self.state_signal.emit(self.state)
             generator_type.setDisabled(self.state)
             if self.state:
                 button.setText("Turn off\ngenerator")
