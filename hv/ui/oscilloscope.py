@@ -12,7 +12,7 @@ class Oscilloscope(QWidget):
     def __init__(self, parent, current_units):
         super(Oscilloscope, self).__init__(parent)
         self.current_units = current_units
-        self.state = True
+        self.turn_on = True
         self.init_data()
         self.init_UI()
 
@@ -22,51 +22,47 @@ class Oscilloscope(QWidget):
         self.voltage = [0 for i in self.times]
         self.current = [0 for i in self.times]
 
-    def init_UI(self):
-        vbox = QVBoxLayout()
-        self.setLayout(vbox)
-        self._figure = Figure(figsize=(7, 5))
-        dynamic_canvas = FigureCanvas(self._figure)
-        vbox.addWidget(NavigationToolbar(dynamic_canvas, self))
-        vbox.addWidget(dynamic_canvas)
+    def init_axes(self, dynamic_canvas):
         self._voltage_ax, self._current_ax = dynamic_canvas.figure.subplots(2, 1)
-
         self._voltage_ax.set_ylabel("Voltage, kV", fontsize = 16)
-
         self._current_ax.set_xlabel("Time, s", fontsize = 16)
         self._current_ax.set_ylabel("Current, {}".format(self.current_units), fontsize = 16)
-
         for axes in [self._voltage_ax, self._current_ax]:
             axes.grid(True)
             axes.minorticks_on()
             axes.tick_params(axis="y",which="both", right=True, labelright=True)
-
         self._voltage_line = self._voltage_ax.plot(np.asarray(self.times) - self.init_time, self.voltage)[0]
         self._current_line = self._current_ax.plot(np.asarray(self.times) - self.init_time, self.current)[0]
         self._figure.tight_layout()
 
+
+    def init_UI(self):
+        vbox = QVBoxLayout(self)
+        self._figure = Figure(figsize=(7, 5))
+        dynamic_canvas = FigureCanvas(self._figure)
         hbox = QHBoxLayout()
         vbox.addLayout(hbox)
+        hbox.addWidget(NavigationToolbar(dynamic_canvas, self))
         hbox.addStretch()
-
         stop_btn = QPushButton("Stop")
+        save_btn = QPushButton("Save buffer")
+        hbox.addWidget(stop_btn)
+        hbox.addWidget(save_btn)
+        vbox.addWidget(dynamic_canvas)
+        self.init_axes(dynamic_canvas)
 
         def turn():
-            self.state = not self.state
-            if self.state:
+            self.turn_on = not self.turn_on
+            if self.turn_on:
                 stop_btn.setText("Stop")
             else:
                 stop_btn.setText("Continue")
 
         stop_btn.clicked.connect(turn)
-        hbox.addWidget(stop_btn)
-
-        save_btn = QPushButton("Save buffer")
-        hbox.addWidget(save_btn)
 
         def save():
             name = QFileDialog.getSaveFileName(self, "Save oscilloscope buffer.")[0]
-            if name is not None or name!="":
+            if name is not None and name != "":
                 with open(name, "w") as fout:
                     fout.write('"{}","{}","{}"\n'.format("Unix time, s", "Voltage, kV", "Current, {}".format(self.current_units)))
                     for time, U, I in zip(self.times, self.voltage, self.current):
@@ -75,7 +71,7 @@ class Oscilloscope(QWidget):
         save_btn.clicked.connect(save)
 
     def update_data(self, time, U, I):
-        if self.state:
+        if self.turn_on:
             self.times.pop(0)
             self.voltage.pop(0)
             self.current.pop(0)

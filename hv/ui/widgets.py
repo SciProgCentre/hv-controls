@@ -5,15 +5,15 @@ from hv.hv_device import HVDevice
 
 
 class AttentionLabel(QLabel):
-    def __init__(self):
-        super(AttentionLabel, self).__init__("Attention!\nHV device save last voltage!\nTake care of yourself!")
+    def __init__(self, parent):
+        super(AttentionLabel, self).__init__("Attention!\nHV device save last voltage!\nTake care of yourself!", parent)
         self.setStyleSheet("QLabel {color : red}")
         self.setAlignment(QtCore.Qt.AlignCenter)
 
 
 class ConnectionLostLabel(QLabel):
-    def __init__(self):
-        super(ConnectionLostLabel, self).__init__("Connection lost")
+    def __init__(self, parent):
+        super(ConnectionLostLabel, self).__init__("Connection lost", parent)
         self.setStyleSheet("QLabel {color : red; font-size : 18pt}")
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.hide()

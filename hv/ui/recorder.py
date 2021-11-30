@@ -5,8 +5,7 @@ class Recorder(QWidget):
     def __init__(self, parent, filename):
         super(Recorder, self).__init__(parent)
         self.filename = filename
-        self.state = False
-        self.fout = None
+        self.turn_on = False
         self.init_UI()
 
     def init_UI(self):
@@ -25,7 +24,7 @@ class Recorder(QWidget):
 
         def select_name():
             name = QFileDialog.getSaveFileName(self, "Create/Select file for record")[0]
-            if name is not None or name != "":
+            if name is not None and name != "":
                 field.setText(name)
 
         save_btn.clicked.connect(select_name)
@@ -34,8 +33,10 @@ class Recorder(QWidget):
         hbox.addWidget(button)
 
         def turn():
-            self.state = not self.state
-            if self.state:
+            self.turn_on = not self.turn_on
+            field.setDisabled(self.turn_on)
+            save_btn.setDisabled(self.turn_on)
+            if self.turn_on:
                 self.fout = open(self.filename, "a")
                 button.setText("Stop record")
             else:
@@ -45,6 +46,6 @@ class Recorder(QWidget):
         button.clicked.connect(turn)
 
     def add_data(self, time, U, I):
-        if self.state:
+        if self.turn_on:
             self.fout.write("{},{},{}\n".format(time, U, I))
             self.fout.flush()

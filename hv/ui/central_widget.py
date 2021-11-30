@@ -1,3 +1,4 @@
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import QTabWidget
 
 from hv.ui.hv_widget import HVWidget
@@ -20,3 +21,8 @@ class HVCentralWidget(QTabWidget):
         widget.closeTab()
         self.removeTab(index)
         del widget
+
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        for i in range(self.count()):
+            self.close_tab(0)
+        super(HVCentralWidget, self).closeEvent(event)

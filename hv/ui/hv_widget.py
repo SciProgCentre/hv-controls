@@ -1,7 +1,8 @@
 import time
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QWidget, QCheckBox, QHBoxLayout, QVBoxLayout
+from PyQt5.QtGui import QPalette
+from PyQt5.QtWidgets import QWidget, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea
 
 from hv.ui.indicator import Indicator
 from hv.ui.oscilloscope import Oscilloscope
@@ -18,6 +19,7 @@ class HVWidget(QWidget):
         self.item = item
         self.settings = HVWidgetSettings.load_settings(str(self.item.device), self.item.device.data)
         self.init_UI()
+        self.timer_id = self.startTimer(2000, QtCore.Qt.PreciseTimer)
 
     def _create_reset_box(self):
         check_box = QCheckBox("Autoreset voltage by exit", self)
@@ -34,42 +36,37 @@ class HVWidget(QWidget):
         return check_box
 
     def init_UI(self):
-        hbox = QHBoxLayout()
-        self.setLayout(hbox)
-
         data = self.item.device.data
-
-        vbox = QVBoxLayout()
-        hbox.addLayout(vbox)
-        self.attention_label = AttentionLabel()
-        vbox.addWidget(self.attention_label)
-        vbox.addWidget(self._create_reset_box(), QtCore.Qt.AlignLeft)
+        self.attention_label = AttentionLabel(self)
+        self.connection_loss_label = ConnectionLostLabel(self)
         self.indicator = Indicator(self, data.resolve_current_label())
-        vbox.addWidget(self.indicator)
         self.record = Recorder(self, self.settings.last_file)
-        vbox.addWidget(self.record)
         self.source_setup = HVSourceSetup(self, self.item.device, self.settings)
-        vbox.addWidget(self.source_setup)
-        self.connection_loss_label = ConnectionLostLabel()
-        vbox.addWidget(self.connection_loss_label)
-        vbox.addStretch(20)
-
-        vbox = QVBoxLayout()
-        hbox.addLayout(vbox)
         self._oscilloscope = Oscilloscope(self, data.resolve_current_label())
-        vbox.addWidget(self._oscilloscope)
-        vbox.addStretch()
-        self.timer_id = self.startTimer(2000,  QtCore.Qt.PreciseTimer)
+
+        hbox = QHBoxLayout(self)
+        self.controls_box = QVBoxLayout()
+        hbox.addLayout(self.controls_box, 1)
+        self.controls_box.addWidget(self.connection_loss_label)
+        self.controls_box.addWidget(self.attention_label)
+        self.controls_box.addWidget(self._create_reset_box(), QtCore.Qt.AlignLeft)
+        self.controls_box.addWidget(self.record)
+        self.controls_box.addWidget(self.indicator, 11)
+        self.controls_box.addWidget(self.source_setup)
+        self.controls_box.addStretch(10)
+        hbox.addWidget(self._oscilloscope, 2, QtCore.Qt.AlignTop)
 
     def timerEvent(self, a0: 'QTimerEvent') -> None:
         if self.item.device.is_open:
             self.read_values()
         else:
             # If loss connection to device, repeat connect
+            self.setDisabled(True)
             self.connection_loss_label.show()
             self.item.device.open()
             if self.item.device.is_open:
-                self.connection_loss_label.hide()
+                pass
+                # self.connection_loss_label.hide()
 
     def read_values(self):
         if self.item.device.is_open:
@@ -90,6 +87,6 @@ class HVWidget(QWidget):
                 self.item.device.reset_value()
         self.item.device.close()
         self.settings.last_file = self.record.filename
-        self.settings.last_generator = self.source_setup.generator.current_generator.generator.name
-        self.source_setup.generator.current_generator.save_settings(self.settings)
+        self.settings.last_generator = self.source_setup.generator.current_generator.generator.NAME
+        self.settings.update_generators(self.source_setup.generator.current_generator.export_settings())
         HVWidgetSettings.save_settings(str(self.item.device), self.settings)

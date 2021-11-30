@@ -184,8 +184,9 @@ class HVDevice:
             return 0, 0
         ADC_mean_count = 16
         U = (temp[2] * 256 + temp[3]) * self.data.voltage_max / self.data.codemax_ADC / ADC_mean_count
-        if self.data.polarity == "N":
-            U = -U
+        # Return absolute value
+        # if self.data.polarity == "N":
+        #     U = -U
         I = (temp[0] * 256 + temp[1]) * self.data.current_max / self.data.codemax_DAC
         if self.data.current_units == "micro":
             I = I - abs(U / self.data.feedback_resistanse)
@@ -236,7 +237,7 @@ def create_test_device():
 
         def read(self, n):
             print("Read:", n)
-            return self.data[2:] + self.data[0:2] + [13]
+            return self.data[2:] + self.data[0:2][::-1] + [13]
     dev = FakeDevice()
     dev = HVDevice(dev, DeviceData.load_device_data(dev.name))
     return dev

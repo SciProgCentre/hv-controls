@@ -2,8 +2,6 @@ import argparse
 import logging
 import sys
 
-from hv.qt_ui import RESOURCE_PATH
-
 
 def hv_controls_cmd(args):
     from hv.cmd_ui import HVShell
@@ -12,7 +10,7 @@ def hv_controls_cmd(args):
 
 def hv_controls_qt(args):
     from PyQt5 import QtWidgets
-    from hv.qt_ui import HVWindow, materials_theme
+    from hv.ui.main_window import HVWindow, materials_theme
     app = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName("NPM_Group")
     app.setOrganizationDomain("npm.mipt.ru")

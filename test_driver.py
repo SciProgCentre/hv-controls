@@ -3,7 +3,6 @@ import time
 from pyftdi import ftdi
 from pyftdi.usbtools import UsbTools
 import pyftdi.serialext
-import serial
 from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 
 devspec = ftdi.Ftdi.list_devices()

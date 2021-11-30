@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
+from typing import Optional
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QPlainTextEdit, QDockWidget
@@ -43,10 +44,19 @@ class HVWidgetSettings:
     last_current: float
     last_file: str = "data.csv"
     auto_reset: bool = True
+    auto_reset_generator: bool = True
     manual_mode: bool = True
     last_generator: str = "square wave"
     generators : dict = dataclasses.field(default_factory=dict)
-    last_custom_generator_module: str = ""
+
+    def resolve_generators(self, name):
+        if name in self.generators.keys():
+            return self.generators[name]
+        return None
+
+    def update_generators(self, parameters: Optional[dict]):
+        if parameters is not None:
+            self.generators.update(parameters)
 
     @staticmethod
     def load_settings(name, default_data):
