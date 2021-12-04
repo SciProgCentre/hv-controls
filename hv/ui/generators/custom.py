@@ -10,7 +10,7 @@ from hv.ui.generators import Generator, GeneratorWidget
 
 TEMPLATE_GENERATOR = """import math
 
-
+TIME_STEP = 0.5 # seconds, step of function call, not recommended less 0.2 s
 PERIOD = 1.0 # seconds, 
 
 
@@ -36,6 +36,7 @@ class CustomGenerator(Generator):
             from importlib.machinery import SourceFileLoader
             user = SourceFileLoader(self.path.stem, str(self.path)).load_module()
             self.period = user.PERIOD
+            self.MIN_TICK = user.TIME_STEP
             self.func = user.generator
             self.times = itertools.cycle([self.MIN_PERIOD*i for i in range(int(self.period/self.MIN_PERIOD))])
             self.timer = self.startTimer(self.MIN_TICK*1000, QtCore.Qt.PreciseTimer)

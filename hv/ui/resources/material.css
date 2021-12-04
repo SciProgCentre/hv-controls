@@ -7,8 +7,18 @@
   /*selection-color: {{primaryTextColor}};*/
 }
 
+
+QPushButton[turn_on="true"]{
+  background-color: red;
+}
+
+QPushButton[turn_on="false"]{
+  background-color: green;
+}
+
 QPushButton {
-  font-size: 12pt
+  font-size: 12pt;
+  font-weight: bold;
 }
 
 QLabel {

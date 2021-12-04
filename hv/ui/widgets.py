@@ -24,3 +24,8 @@ class HVItem(QListWidgetItem):
         super().__init__(list_widget)
         self.device = device
         self.setData(0, device.data.name)
+
+
+def update_style(widget):
+    widget.style().unpolish(widget)
+    widget.style().polish(widget)

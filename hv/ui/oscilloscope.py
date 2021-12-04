@@ -5,6 +5,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFil
 from matplotlib.backends.backend_qt5agg import (FigureCanvas,  NavigationToolbar2QT as NavigationToolbar)
 from matplotlib.figure import Figure
 
+from hv.ui.widgets import update_style
+
 
 class Oscilloscope(QWidget):
     N = 300
@@ -46,6 +48,7 @@ class Oscilloscope(QWidget):
         hbox.addStretch()
         stop_btn = QPushButton("Stop")
         save_btn = QPushButton("Save buffer")
+        stop_btn.setProperty("turn_on", self.turn_on)
         hbox.addWidget(stop_btn)
         hbox.addWidget(save_btn)
         vbox.addWidget(dynamic_canvas)
@@ -53,6 +56,8 @@ class Oscilloscope(QWidget):
 
         def turn():
             self.turn_on = not self.turn_on
+            stop_btn.setProperty("turn_on", self.turn_on)
+            update_style(stop_btn)
             if self.turn_on:
                 stop_btn.setText("Stop")
             else:

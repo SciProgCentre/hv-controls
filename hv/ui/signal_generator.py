@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxL
 from hv.hv_device import HVDevice
 from hv.ui.generators import GENERATOR_FACTORY
 from hv.ui.utils import HVWidgetSettings
+from hv.ui.widgets import update_style
 
 
 class SignalGeneratorWidget(QWidget):
@@ -52,6 +53,7 @@ class SignalGeneratorWidget(QWidget):
         hbox = QHBoxLayout()
         vbox.addLayout(hbox)
         button = QPushButton("Turn on\ngenerator")
+        button.setProperty("turn_on", self.state)
         button.clicked.connect(self._turn)
         generator_type = QComboBox(self)
         current_indx = 0
@@ -73,6 +75,8 @@ class SignalGeneratorWidget(QWidget):
 
         def turn(state):
             generator_type.setDisabled(state)
+            button.setProperty("turn_on", state)
+            update_style(button)
             if state:
                 button.setText("Turn off\ngenerator")
                 self.current_generator.start()

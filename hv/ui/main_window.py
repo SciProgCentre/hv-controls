@@ -50,8 +50,8 @@ class HVWindow(QMainWindow):
     def init_size(self):
         desktop = QDesktopWidget()
         size = desktop.availableGeometry().size()
-        width = min(size.width(), 1280)
-        height = min(size.height(), 720)
+        width = min(size.width()*0.8, 1280)
+        height = min(size.height()*0.8, 720)
         size =QSize(width, height)
         size = self.settings.value("window_size", size)
         self.resize(size)

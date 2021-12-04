@@ -1,5 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton, QFileDialog
 
+from hv.ui.widgets import update_style
+
 
 class Recorder(QWidget):
     def __init__(self, parent, filename):
@@ -30,12 +32,15 @@ class Recorder(QWidget):
         save_btn.clicked.connect(select_name)
 
         button = QPushButton("Start record", self)
+        button.setProperty("turn_on", self.turn_on)
         hbox.addWidget(button)
 
         def turn():
             self.turn_on = not self.turn_on
             field.setDisabled(self.turn_on)
             save_btn.setDisabled(self.turn_on)
+            button.setProperty("turn_on", self.turn_on)
+            update_style(button)
             if self.turn_on:
                 self.fout = open(self.filename, "a")
                 button.setText("Stop record")
