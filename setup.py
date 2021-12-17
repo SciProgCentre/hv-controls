@@ -7,7 +7,7 @@ with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="mip-npm-hv-controls",
+    name="mipt-npm-hv-controls",
     version="0.2.0",
     author="NPM Group",
     author_email="mihail.zelenyy@phystech.edu",

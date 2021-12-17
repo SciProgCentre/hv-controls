@@ -23,7 +23,7 @@ def materials_theme():
         if font.suffix == '.ttf':
             QFontDatabase.addApplicationFont(str(font))
 
-    loader = jinja2.FileSystemLoader(RESOURCE_PATH)
+    loader = jinja2.FileSystemLoader(str(RESOURCE_PATH))
     env = jinja2.Environment(autoescape=False, loader=loader)
     stylesheet = env.get_template("material.css")
 

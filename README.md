@@ -3,7 +3,7 @@ Simple GUI for HV source controls.
 
 Can be used for [Mantigora](http://mantigora.ru/highvolt_HV.htm) devices.
 
-Tested on Ubuntu 21.10 with HT-60-30-P. Proposal correct work on all platform for HT-60-*, HT-15-*, HT2000, HV2000, HV6000.
+Tested on Ubuntu 21.10 with HT-60-30-P. Proposal correct work on all platform for HT-60-_*_, HT-15-_*_, HT2000, HV2000, HV6000.
 
 ## Installation
 
@@ -23,8 +23,8 @@ Devices parameters located in `hv/device_data` and based on file `Unit1.pas`, in
 Parameters of next devices isn't consistent:
 
 * *HT-15-10-P* and *HT-15-10-N*: max current 3000 mcA or 750 mcA?
-* _HT-6-*_ absent current step.
-* *HT4000*, *HT6000*, _HR*_ absent codemax ADC and DAC.
+* _HT-6-..._ absent current step.
+* *HT4000*, *HT6000*, _HR..._ absent codemax ADC and DAC.
 
 ### Code overview
 Файл `hv_device.py` содержит класс `HVDevice`, который принимает команды от консольного или графического интерфейса и превращает их в команды для низкоуровневых драйверов. Файлы `ftdi_device.py` и `ftd2xx_device.py` содержать классы-обертки над драйверами STDI и STD2XX (для него пока только заглушка).
