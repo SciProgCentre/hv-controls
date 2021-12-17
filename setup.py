@@ -7,24 +7,26 @@ with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="hv-controls",
+    name="mip-npm-hv-controls",
     version="0.2.0",
     author="NPM Group",
     author_email="mihail.zelenyy@phystech.edu",
-    url='http://npm.mipt.ru/',
+    url='https://npm.mipt.ru/',
     description="Simple GUI for HV controls",
     license="MIT License",
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="hv",
-    packages=setuptools.find_packages(),
+    packages= ["hv"],
     entry_points = {
-      "console_scripts" : [
+      "gui_scripts" : [
           "hv-controls = hv.run:app"
       ]
     },
-    package_data = { "hv" : ["data/*", "device_data/*"]},
-    include_package_data = True,
+    package_data = {
+        "hv" : ["data/*", "device_data/*"],
+        "hv.ui" : ["resources/*"]
+    },
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -38,8 +40,9 @@ setuptools.setup(
     install_requires=[
         "pyqt5",
         "pyftdi",
-        "ftd2xx",
+        # "ftd2xx",
         "matplotlib",
         "Jinja2"
-    ]
+    ],
+    python_requires=">=3.7"
 )

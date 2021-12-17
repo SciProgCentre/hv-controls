@@ -4,10 +4,6 @@ from typing import Optional, Callable, List
 
 class FTD2XXDevice:
     """
-    Полезные ссылки для реализации этого класса
-https://iosoft.blog/2018/12/02/ftdi-python-part-1/
-https://iosoft.blog/2018/12/05/ftdi-python-part-2/
-https://iosoft.blog/2018/12/05/ftdi-python-part-3/
     """
     def __init__(self, device):
         self.device = device

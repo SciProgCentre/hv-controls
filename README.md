@@ -7,9 +7,11 @@ Tested on Ubuntu 21.10 with HT-60-30-P. Proposal correct work on all platform fo
 
 ## Installation
 
-1. Install USB/FTDI drivers. Application used different drivers for Linux and Windows. For Linux used `pyftdi` with `libusb` (On Debian/Ubuntu use `sudo apt-get install libusb-1.0`) .For Windows used FTD2XX.
+1. Install USB/FTDI drivers. Application can be used different drivers for Linux and Windows. For Linux/Windows can be used `pyftdi` with `libusb` (On Debian/Ubuntu use `sudo apt-get install libusb-1.0`). For Windows can be used FTD2XX (Not implemented).
 2. Configure our system what would to allow using drivers from user-space. For linux see [here](https://eblot.github.io/pyftdi/installation.html#debian-ubuntu-linux) or run application with `sudo`.
-3. Install application from source, move apllication source directory and run `pip install -e .` (Also you can install dependencies manualy `pip install pyqt5 pyftdi ftd2xx`)
+3. Install application:
+   * For installation from PyPI run `pip install mipt-npm-hv-controls`
+   * For installation from source, move application source directory and run `pip install -e .` (Also you can install dependencies manually `pip install pyqt5 pyftdi matplotlib Jinja2`)
 4. Run `hv-controls` in terminal (or `python3 main.py`). Use option `--no-gui` for run console apps. Use options `--debug` for getting debug information in log. 
 
 ## For developers
@@ -28,7 +30,7 @@ Parameters of next devices isn't consistent:
 Файл `hv_device.py` содержит класс `HVDevice`, который принимает команды от консольного или графического интерфейса и превращает их в команды для низкоуровневых драйверов. Файлы `ftdi_device.py` и `ftd2xx_device.py` содержать классы-обертки над драйверами STDI и STD2XX (для него пока только заглушка).
 
 Файл `cmd_ui.py` предоставляет консольный интерфейс для управления прибором, будет полезен при отладке.
-Файл `qt_ui.py` предоставляет графический интерфейс для управления прибором.
+Директория `hv/ui` предоставляет графический интерфейс для управления прибором.
 Файл `run.py` содержит точки входа, для запуска которых `pip` умеет создавать shell и bat скрипты.
 Файл `main.py` позволяет запускать консольный и графический интерфейс
 
