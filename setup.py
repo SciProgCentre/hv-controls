@@ -8,7 +8,7 @@ with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
 
 setuptools.setup(
     name="mipt-npm-hv-controls",
-    version="0.2.0",
+    version="0.2.1",
     author="NPM Group",
     author_email="mihail.zelenyy@phystech.edu",
     url='https://npm.mipt.ru/',
@@ -17,7 +17,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="hv",
-    packages= ["hv"],
+    packages= setuptools.find_packages(),
     entry_points = {
       "gui_scripts" : [
           "hv-controls = hv.run:app"
@@ -25,7 +25,7 @@ setuptools.setup(
     },
     package_data = {
         "hv" : ["data/*", "device_data/*"],
-        "hv.ui" : ["resources/*"]
+        "hv.ui" : ["resources/*", "resources/fonts/roboto/*"]
     },
     classifiers=(
         "Programming Language :: Python :: 3",
