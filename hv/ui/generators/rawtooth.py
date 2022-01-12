@@ -19,10 +19,11 @@ class ReversedRawtoothWave(ScanningGenerator):
     def start(self):
         self.current_time = 0.0
         self.current_impulse_length = self.impulse_length()
-        self.max_voltage = self.parameters.max_voltage
-        self.min_voltage = self.parameters.min_voltage
-        coeff = (self.max_voltage - self.min_voltage) / self.current_impulse_length
+        max_voltage = self.parameters.max_voltage
+        min_voltage = self.parameters.min_voltage
+        coeff = (max_voltage - min_voltage) / self.current_impulse_length
         self.voltage_step = self.MIN_TICK*coeff
+        self.voltage = max_voltage
         self.state = RawtoothState.START
         self.timer_id  = self.startTimer(self.MIN_TICK*1000, QtCore.Qt.PreciseTimer)
 
@@ -33,8 +34,7 @@ class ReversedRawtoothWave(ScanningGenerator):
         if self.device.is_open:
             self.current_time += self.MIN_TICK
             if self.state == RawtoothState.START:
-                self.device.set_value(self.voltage, self.parameters.current)
-                self.device.update_value()
+                self.setup(self.voltage, self.parameters.current)
                 self.state = RawtoothState.RISE
             elif self.state == RawtoothState.ZERO:
                 if self.current_time > self.parameters.period:
@@ -48,15 +48,15 @@ class ReversedRawtoothWave(ScanningGenerator):
                       self.state = RawtoothState.IMPULSE
 
                 if self.state == RawtoothState.IMPULSE:
-                    self.device.set_value(self.voltage, self.parameters.current)
-                    self.device.update_value()
+                    self.setup(self.voltage, self.parameters.current)
                     self.voltage -= self.voltage_step
-                    if self.voltage < 0:
-                        self.voltage = 0
+                    if self.voltage < self.parameters.min_voltage:
+                        self.voltage = self.parameters.min_voltage
 
                 if self.current_time >= self.current_impulse_length:
                     self.state = RawtoothState.ZERO
-                    if self.voltage > 0:
-                        self.device.reset_value()
+                    if self.voltage > self.parameters.min_voltage:
+                        self.voltage = self.parameters.min_voltage
+                        self.device.set_value(self.voltage, self.parameters.current)
         else:
             self.abort_signal.emit()
