@@ -2,16 +2,25 @@
         "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
+    <meta charset="utf-8"/>
     <title>Title</title>
 </head>
 <body>
 <h1>Controls programm for Mantigora HV device</h1>
-<h2>Functionality</h2>
-Top menu allow call next widget: list of devices connected to PC, log of program, inforamation about device parameters and this help.
-Any device open in separate tab.
-Device tab separate on two area: be left locate controls element and by right locate oscilloscope.
-Recorder --- allow turn on record indicator's values to file (in append mode) in format: unixtimestap, voltage(V), currect(mcA)
-Indicator --- show voltage and current on device with fixed period.
-Oscilloscope --- show graph for voltage and current for last 10 minutes. Allow take screenshots, stop oscliscope, save osciliscope buffer and customize graph style and views
+<h2>Общий обзор</h2>
+<ul>
+    <li>Текущие значения тока и напряжения отображаются на индикаторе, обновляемом каждые 2 секунды. Кнопка <strong>Start record</strong> включает запись показаний индикатора в файл, в формате: время, напряжение, ток.</li>
+    <li>Под индикатором расположены кнопки для выставления напряжение. Доступный два режима: выставление фиксированного значения и генерация периодического сигнала (описание доступных сигналов смотри в следующем разделе)</li>
+    <li>Справа расположены графики напряжения и тока. Кнопка <strong>Stop</strong> останавливает построение графика. Кнопка <strong>Save buffer</strong> сохраняет в файл точки графика за последние 10 минут. Так же есть кнопки для сохраненния графика как изображения и для настройки графика.</li>
+</ul>
+<h2>Описание генераторов</h2>
+После нажатии кнопки <strong>Swith to generator mode</strong>, можно выбрать тип периодического сигнала и указать его параметры. Достпны следующие виды сигналов:
+<ul>
+    <li><em>Square wave</em> &mdash; прямоугольные импульсы, можно задать минимальное и максимальное напряжение, предельный ток, период сигнала и его коэффициент заполнения.</li>
+    <li><em>Stairs</em> &mdash; прямая лесенка, напряжение изменяется от минимального до максимального, фиксированны шагами через заданные промежутки времени (с учетом предельного тока).</li>
+    <li><em>Reversed rawtooth</em> &mdash; обратная пила, выставляется максимальное напряжение и линейно спадает до минимального. Можно задать минимальное и максимальное напряжение, предельный ток, период сигнала и его коэффициент заполнения.</li>
+    <li><em>Custom</em> &mdash; использует код из пользовательского файла для генерации периодического сигнала. Кнопка <strong>Export template</strong> позволяет получить шаблон для кода. В коде нужно определить период сигнала через переменную <code>PERIOD</code>, шаг временной сетки через переменную <code>TIME_STEP</code>, и функцию <code>generator</code>, принимающую на вход время и возвращающую значения напряджения и тока, которые надо выставить на источник.</li>
+
+</ul>
 </body>
 </html>

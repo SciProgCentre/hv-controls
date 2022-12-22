@@ -8,7 +8,7 @@ with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fh:
 
 setuptools.setup(
     name="mipt-npm-hv-controls",
-    version="0.2.1",
+    version="0.2.2",
     author="NPM Group",
     author_email="mihail.zelenyy@phystech.edu",
     url='https://npm.mipt.ru/',
