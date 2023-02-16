@@ -1,8 +1,7 @@
 import time
 
-from PyQt5 import QtCore
-from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QWidget, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea
+from PySide6 import QtCore
+from PySide6.QtWidgets import QWidget, QCheckBox, QHBoxLayout, QVBoxLayout, QScrollArea
 
 from hv.ui.indicator import Indicator
 from hv.ui.oscilloscope import Oscilloscope

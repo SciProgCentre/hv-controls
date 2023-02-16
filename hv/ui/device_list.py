@@ -1,8 +1,7 @@
 import dataclasses
 import logging
 
-from PyQt5 import QtCore
-from PyQt5.QtWidgets import QDockWidget, QWidget, QVBoxLayout, QListWidget, QPushButton, QLabel
+from PySide6.QtWidgets import QDockWidget, QWidget, QVBoxLayout, QListWidget, QPushButton, QLabel
 
 from hv.hv_device import create_test_device, HVDevice
 from hv.ui.widgets import HVItem

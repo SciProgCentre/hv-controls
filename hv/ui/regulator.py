@@ -1,11 +1,11 @@
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QSlider, QLabel
+from PySide6 import QtCore
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QDoubleSpinBox, QSlider, QLabel
 
 
 class HVRegulator(QWidget):
 
-    valueChanged = pyqtSignal(float)
+    valueChanged = Signal(float)
 
     def __init__(self, parent, name, min_input, max_input, step, default):
         super(HVRegulator, self).__init__(parent)

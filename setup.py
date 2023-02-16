@@ -38,7 +38,7 @@ setuptools.setup(
         "Source Code": "https://github.com/mipt-npm/hv-controls",
     },
     install_requires=[
-        "pyqt5",
+        "pyside6",
         "pyftdi",
         # "ftd2xx",
         "matplotlib",

@@ -1,5 +1,5 @@
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import QTabWidget
+from PySide6 import QtGui
+from PySide6.QtWidgets import QTabWidget
 
 from hv.ui.hv_widget import HVWidget
 from hv.ui.widgets import HVItem

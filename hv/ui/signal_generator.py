@@ -1,6 +1,5 @@
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QCheckBox
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QCheckBox
 
 from hv.hv_device import HVDevice
 from hv.ui.generators import GENERATOR_FACTORY
@@ -10,7 +9,7 @@ from hv.ui.widgets import update_style
 
 class SignalGeneratorWidget(QWidget):
 
-    state_signal = pyqtSignal(bool)
+    state_signal = Signal(bool)
 
     def _turn(self):
         self.state = not self.state
@@ -47,7 +46,6 @@ class SignalGeneratorWidget(QWidget):
         auto_reset_box.stateChanged.connect(handler)
         return auto_reset_box
 
-
     def init_UI(self):
         vbox = QVBoxLayout(self)
         hbox = QHBoxLayout()
@@ -61,7 +59,6 @@ class SignalGeneratorWidget(QWidget):
             generator_type.insertItem(i, key)
             if self.settings.last_generator == key:
                 current_indx = i
-
 
         vbox_1 = QVBoxLayout()
         vbox_1.addWidget(generator_type)

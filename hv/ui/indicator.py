@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QLCDNumber, QVBoxLayout
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QLCDNumber, QVBoxLayout
 
 
 class Indicator(QGroupBox):

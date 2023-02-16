@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QGroupBox, QPushButton, QVBoxLayout
 
 from hv.hv_device import HVDevice
 from hv.ui.basic_setup import HVBasicSetup

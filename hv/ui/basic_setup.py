@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout
 
 from hv.hv_device import HVDevice
 from hv.ui.regulator import HVRegulator

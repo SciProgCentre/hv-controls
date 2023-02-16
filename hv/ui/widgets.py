@@ -1,5 +1,5 @@
-from PyQt5 import QtCore
-from PyQt5.QtWidgets import QLabel, QListWidgetItem
+from PySide6 import QtCore
+from PySide6.QtWidgets import QLabel, QListWidgetItem
 
 from hv.hv_device import HVDevice
 

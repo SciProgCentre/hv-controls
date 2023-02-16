@@ -2,11 +2,11 @@ import logging
 import pathlib
 
 import jinja2
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import QSettings, QSize
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QDockWidget, QTextBrowser
-from PyQt5.QtGui import QFontDatabase
+from PySide6 import QtCore, QtGui
+from PySide6.QtCore import QSettings, QSize
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QMainWindow, QDockWidget, QTextBrowser
+from PySide6.QtGui import QFontDatabase
 
 from hv.ui.central_widget import HVCentralWidget
 from hv.ui.device_list import DeviceList, DeviceInfo
@@ -48,8 +48,8 @@ class HVWindow(QMainWindow):
         self.init_UI(args)
 
     def init_size(self):
-        desktop = QDesktopWidget()
-        size = desktop.availableGeometry().size()
+        screen = QtGui.QGuiApplication.primaryScreen()
+        size = screen.availableGeometry().size()
         width = min(int(size.width()*0.8), 1280)
         height = min(int(size.height()*0.8), 720)
         size = QSize(width, height)
